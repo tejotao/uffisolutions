@@ -20,6 +20,7 @@ import AdminUsers from '@/pages/admin/AdminUsers';
 import AccessBoard from '@/pages/admin/AccessBoard';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 
 import '@/styles/globals.css';
 
@@ -78,6 +79,8 @@ function App() {
           <Route path="/"        element={user ? <Navigate to="/dashboard" replace /> : <HomePage user={user} />} />
           <Route path="/login"   element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
           <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
+
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           <Route path="/products"     element={<ProductsPage user={user} />} />
           <Route path="/products/:id" element={<ProductDetail user={user} />} />
