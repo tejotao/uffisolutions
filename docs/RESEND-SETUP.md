@@ -1,7 +1,7 @@
-# Configuração de Email — Resend + us@uffisphere.com + Supabase
+# Configuração de Email — Resend + us@uffisolutions.com + Supabase
 
 Objetivo: todos os emails da plataforma (confirmação de conta, reset de password) 
-enviados DE `us@uffisphere.com` com branding UffiSolutions.
+enviados DE `us@uffisolutions.com` com branding UffiSolutions.
 
 ---
 
@@ -12,9 +12,9 @@ enviados DE `us@uffisphere.com` com branding UffiSolutions.
 2. Clica "Sign Up" → usa `tejotao@gmail.com`
 3. Confirma o email
 
-### 1.2 Adicionar e verificar o domínio `uffisphere.com`
+### 1.2 Adicionar e verificar o domínio `uffisolutions.com`
 1. No dashboard Resend → **Domains** → **Add Domain**
-2. Escreve `uffisphere.com` → clica **Add**
+2. Escreve `uffisolutions.com` → clica **Add**
 3. O Resend vai mostrar registos DNS para adicionar:
 
 ```
@@ -25,7 +25,7 @@ TXT     resend._domainkey  [chave DKIM longa — copia do painel]
 MX      (opcional)         feedback-smtp.us-east-1.amazonses.com
 ```
 
-4. Vai ao painel DNS do `uffisphere.com` (Hostinger, Cloudflare, etc.)
+4. Vai ao painel DNS do `uffisolutions.com` (Hostinger, Cloudflare, etc.)
 5. Adiciona os registos acima
 6. Volta ao Resend → clica **Verify** (pode demorar até 24h, mas normalmente < 5 min)
 7. Quando aparecer ✅ verde → domínio verificado
@@ -37,7 +37,7 @@ MX      (opcional)         feedback-smtp.us-east-1.amazonses.com
 1. No Resend → **API Keys** → **Create API Key**
    - Nome: `uffisolutions-supabase`
    - Permission: **Sending access**
-   - Domain: `uffisphere.com`
+   - Domain: `uffisolutions.com`
 2. **Copia a chave** (só é mostrada uma vez!) — formato: `re_xxxxxxxxxxxxxxxx`
 
 ### Credenciais SMTP para o Supabase:
@@ -46,7 +46,7 @@ SMTP Host:     smtp.resend.com
 SMTP Port:     465 (SSL) ou 587 (TLS)
 SMTP User:     resend
 SMTP Password: re_xxxxxxxxxxxxxxxx  ← a tua API Key
-From Email:    us@uffisphere.com
+From Email:    us@uffisolutions.com
 From Name:     UffiSolutions
 ```
 
@@ -98,7 +98,7 @@ Os templates HTML estão em `/docs/email-templates/`
 ### Teste de Confirmação:
 1. Vai a `https://uffisolutions.com/register` (ou localhost)
 2. Regista um email de teste
-3. Verifica a caixa de entrada — deve chegar DE `us@uffisphere.com` com o template personalizado
+3. Verifica a caixa de entrada — deve chegar DE `us@uffisolutions.com` com o template personalizado
 
 ### Teste de Reset:
 1. Vai a `/login` → "Forgot password?"
@@ -121,7 +121,7 @@ Resend Dashboard → **Emails** → vês todos os emails enviados com:
 ## Checklist Final
 
 - [ ] Conta Resend criada
-- [ ] Domínio `uffisphere.com` verificado (registos DNS adicionados)
+- [ ] Domínio `uffisolutions.com` verificado (registos DNS adicionados)
 - [ ] API Key gerada e guardada
 - [ ] Supabase SMTP configurado com credenciais Resend
 - [ ] Site URL e Redirect URLs configurados em Supabase
@@ -138,6 +138,6 @@ Resend Dashboard → **Emails** → vês todos os emails enviados com:
 |---|---|
 | Email não chega | Verifica SMTP no Supabase está enabled; verifica API key no Resend |
 | Email vai para spam | Aguarda propagação DNS completa (24h); adiciona registo DMARC |
-| Erro "Invalid from address" | Verifica que `uffisphere.com` está verificado no Resend |
+| Erro "Invalid from address" | Verifica que `uffisolutions.com` está verificado no Resend |
 | Link de reset não funciona | Verifica que `https://uffisolutions.com/reset-password` está na lista de Redirect URLs do Supabase |
 | Template aparece sem formatação | Supabase strip some CSS — é normal para preview; no Gmail aparece correctamente |
