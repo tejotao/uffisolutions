@@ -1,0 +1,213 @@
+{
+  "nav": {
+    "home": "Início",
+    "catalog": "Catálogo",
+    "about": "Sobre",
+    "contact": "Contato",
+    "allProducts": "Ver Todos os Produtos",
+    "adminArea": "Área Admin"
+  },
+  "auth": {
+    "login": "Entrar",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Esqueci-me da password",
+    "createAccount": "Criar Conta",
+    "fullName": "Nome Completo",
+    "prefLang": "Idioma Preferido",
+    "loginBtn": "Entrar",
+    "createAccountBtn": "Criar Conta",
+    "noAccount": "Não tens conta?",
+    "hasAccount": "Já tenho conta.",
+    "resetTitle": "Recuperar Password",
+    "resetBtn": "Enviar Link de Recuperação",
+    "resetSuccess": "Verifica o teu email para recuperar a password",
+    "passwordLength": "A senha deve ter pelo menos 6 caracteres.",
+    "back": "← Voltar"
+  },
+  "profile": {
+    "title": "Perfil",
+    "name": "Nome",
+    "email": "Email",
+    "lang": "Idioma",
+    "xp": "XP",
+    "level": "Nível",
+    "edit": "Editar Perfil",
+    "changePwd": "Mudar Password",
+    "logout": "Sair",
+    "myProducts": "Meus Produtos",
+    "noProducts": "Ainda não tens produtos — explora o catálogo!",
+    "explore": "Explorar Catálogo",
+    "access": "Aceder",
+    "loginRequired": "Faz login para ver os teus produtos"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "markAllRead": "Marcar todas lidas",
+    "markRead": "Marcar como lida",
+    "delete": "Apagar",
+    "empty": "Sem notificações no momento.",
+    "emptyFilter": "Nenhuma notificação encontrada nesta aba.",
+    "viewAll": "Ver todas as notificações",
+    "filters": {
+      "all": "Todas",
+      "unread": "Não Lidas",
+      "read": "Lidas"
+    },
+    "time": {
+      "now": "agora mesmo",
+      "ago": "há",
+      "min": "min",
+      "hours": "horas",
+      "days": "dias"
+    }
+  },
+  "favorites": {
+    "title": "Meus Favoritos",
+    "empty": "Ainda não tens favoritos",
+    "emptyDesc": "Navega pelo catálogo e guarda os infoprodutos que mais gostares para acederes mais tarde.",
+    "added": "Adicionado aos favoritos",
+    "removed": "Removido dos favoritos",
+    "loginRequired": "Login necessário",
+    "loginDesc": "Faz login para adicionar aos favoritos."
+  },
+  "gamification": {
+    "levelUpTitle": "Parabéns! Subiste para o nível",
+    "levelUpDesc": "Continua a explorar e a aprender!",
+    "continue": "Continuar",
+    "xpToNext": "XP para o próximo nível",
+    "currentLevel": "Nível Atual",
+    "xpPoints": "Pontos de Experiência",
+    "levels": {
+      "Curioso": "Curioso",
+      "Iniciante": "Iniciante",
+      "Importador": "Importador",
+      "Empreendedor": "Empreendedor",
+      "Expert UK": "Expert UK",
+      "Master UffiSolutions": "Master UffiSolutions"
+    }
+  },
+  "admin": {
+    "title": "Painel Admin",
+    "accessDenied": "Acesso Negado",
+    "dashboard": "Dashboard",
+    "users": "Utilizadores",
+    "products": "Produtos",
+    "purchases": "Compras",
+    "superAdmin": "Super Admin",
+    "totalUsers": "Total Utilizadores",
+    "totalPurchases": "Total Compras",
+    "totalRevenue": "Receita Total",
+    "noUsers": "Nenhum utilizador encontrado.",
+    "productManagement": "Gestão de produtos via base de dados local simulada.",
+    "buyer": "Comprador",
+    "product": "Produto",
+    "status": "Status",
+    "noPurchases": "Nenhuma compra encontrada.",
+    "addClient": "Adicionar Cliente",
+    "newClient": "Cadastrar Novo Cliente",
+    "phone": "Telefone",
+    "addPackage": "Adicionar Pacote",
+    "newPackage": "Registrar Novo Pacote",
+    "client": "Cliente",
+    "selectClient": "Selecione o cliente",
+    "trackingNumber": "Número de Rastreio",
+    "weight": "Peso (kg)",
+    "items": "Itens",
+    "editPackage": "Editar Pacote",
+    "extraServices": "Serviços Extras",
+    "shippingCost": "Custo do Frete (£)",
+    "finalTracking": "Rastreamento Final",
+    "invoiceSummary": "Resumo da Fatura",
+    "baseFee": "Taxa Base",
+    "storage": "Armazenagem",
+    "shipping": "Frete",
+    "total": "Total",
+    "saveChanges": "Salvar Alterações",
+    "cancel": "Cancelar"
+  },
+  "hero": {
+    "tag": "🚀 Portal de Infoprodutos Premium",
+    "title1": "Conhecimento que",
+    "title2": "gera resultado",
+    "ctaPrimary": "🎓 Ver Catálogo",
+    "ctaSecondary": "Saiba Mais"
+  },
+  "slogans": {
+    "main": "Do conhecimento à conquista — aprenda, importe e evolua."
+  },
+  "categories": {
+    "explore": "Explorar por Categoria",
+    "all": "🔥 Todos",
+    "importacao-uk-br": "Importação UK→BR",
+    "vida-uk": "Vida no UK",
+    "negocio-online": "Negócio Online",
+    "nichos-hobbies": "Nichos & Hobbies",
+    "ferramentas-digitais": "Ferramentas Digitais",
+    "comunidade": "Comunidade"
+  },
+  "whyUs": {
+    "tag": "Porquê escolher",
+    "title": "A diferença da UffiSolutions",
+    "items": {
+      "practical": { "title": "Conteúdo Prático", "desc": "Sem teoria desnecessária." },
+      "results": { "title": "Foco em Resultados", "desc": "Cada produto gera impacto real." },
+      "updated": { "title": "Sempre Atualizado", "desc": "Conteúdo revisado regularmente." },
+      "global": { "title": "Para Brasileiros no Mundo", "desc": "Feito por quem entende." }
+    }
+  },
+  "products": {
+    "premium": "PREMIUM",
+    "viewAll": "Ver todos",
+    "catalogTitle": "Catálogo de Produtos",
+    "catalogDesc": "Descubra os nossos melhores infoprodutos para alavancar o seu conhecimento.",
+    "search": "Buscar produtos...",
+    "loading": "Carregando produtos...",
+    "resultsFor": "resultados para",
+    "noProducts": "Nenhum produto encontrado."
+  },
+  "footer": {
+    "desc": "Capacitando empreendedores e importadores pelo mundo com ferramentas e conhecimentos digitais.",
+    "categoriesTitle": "Categorias",
+    "legalTitle": "Legal",
+    "contactTitle": "Contato",
+    "terms": "Termos e Condições",
+    "privacy": "Política de Privacidade",
+    "cookies": "Política de Cookies",
+    "rules": "Regras de Importação",
+    "rights": "Todos os direitos reservados."
+  },
+  "buttons": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "create": "Criar",
+    "back": "Voltar"
+  },
+  "forms": {
+    "name": "Nome Completo",
+    "email": "Email",
+    "password": "Password",
+    "confirm_password": "Confirmar Password",
+    "create_account": "Criar Conta",
+    "has_account": "Já tens uma conta?",
+    "login_link": "Faz login aqui",
+    "forgot_password": "Esqueceste a password?",
+    "remember_me": "Lembrar-me",
+    "no_account": "Ainda não tens conta?",
+    "display_name": "Nome de Exibição",
+    "pref_language": "Idioma Preferido",
+    "profile_pic": "Foto de Perfil",
+    "profile_pic_desc": "Carrega uma imagem JPG, PNG ou WebP. Máx. 5 MB.",
+    "notifications": "Notificações por Email",
+    "notifications_desc": "Recebe atualizações sobre novos produtos e anúncios."
+  },
+  "modals": {
+    "emailConfirmation": {
+      "title": "Verifica o teu email!",
+      "message": "Enviámos um link de confirmação para",
+      "message_end": "Clica no link do email para ativar a tua conta e começar a aprender.",
+      "tip": "Não recebeste? Verifica a pasta de spam ou lixo. Pode demorar alguns minutos.",
+      "button": "Ir para o Login"
+    }
+  }
+}

@@ -1,0 +1,180 @@
+
+{
+  "home": {
+    "title": "Knowledge that",
+    "titleHighlight": "drives results",
+    "subtitle": "From knowledge to achievement — learn, import and grow.",
+    "cta": {
+      "catalog": "View Catalog",
+      "learnMore": "Learn More"
+    },
+    "stats": {
+      "courses": "COURSES",
+      "categories": "CATEGORIES",
+      "digital": "DIGITAL",
+      "languages": "LANGUAGES"
+    },
+    "exploreByCategory": "Explore by Category"
+  },
+  "catalog": {
+    "searchPlaceholder": "Search courses...",
+    "all": "All",
+    "noProducts": "No products found.",
+    "productsFound": "product(s)",
+    "buyNow": "Buy Now",
+    "getFree": "Get Free",
+    "comingSoon": "Coming Soon"
+  },
+  "nav": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "myProducts": "My Products"
+  },
+  "header": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "myProducts": "My Products",
+    "dashboard": "Dashboard",
+    "login": "Login",
+    "logout": "Logout",
+    "myAccount": "My Account"
+  },
+  "footer": {
+    "navigation": "Navigation",
+    "legal": "Legal",
+    "social": "Social Media",
+    "links": {
+      "home": "Home",
+      "catalog": "Catalog",
+      "dashboard": "Dashboard",
+      "terms": "Terms of Use",
+      "privacy": "Privacy Policy",
+      "contact": "Contact Us"
+    },
+    "company": "Uffisphere HTJS Ltd.",
+    "companyNumber": "Company Number: 16827147",
+    "companyLocation": "Registered England and Wales",
+    "copyright": "© 2026 UffiSolutions Ltd. by tjsnitram ®"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Hello, {{name}} 👋",
+    "welcomeSub": "Welcome to your learning dashboard.",
+    "myCourses": "My Courses",
+    "freeCourses": "Acquired Courses",
+    "paidCourses": "Paid Courses",
+    "coursesDescription": "Your acquired knowledge.",
+    "accelerateEvolution": "Accelerate Evolution",
+    "moreCourses": "Explore more courses to accelerate your journey.",
+    "noCourses": "You don't have any courses yet.",
+    "exploreCatalog": "Explore our catalog and start your learning journey today.",
+    "watchNow": "Access",
+    "learnMore": "Learn More",
+    "secureSpot": "Buy Now",
+    "unlocked": "Unlocked",
+    "locked": "Locked",
+    "comingSoon": "Coming Soon"
+  },
+  "auth": {
+    "login": "Login",
+    "loginBtn": "Sign In",
+    "logout": "Logout",
+    "email": "Email Address",
+    "whatsapp": "WhatsApp Number",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot password?",
+    "createAccount": "Create Account",
+    "createAccountBtn": "Sign Up",
+    "signUp": "Sign Up",
+    "fullName": "Full Name",
+    "prefLang": "Preferred Language",
+    "needAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "loginHere": "Login here",
+    "signUpSuccess": "Account created successfully!",
+    "redirecting": "Redirecting...",
+    "resetPassword": "Reset Password",
+    "resetInstructions": "Enter your email and we'll send a link to reset your password.",
+    "sendResetLink": "Send link",
+    "sending": "Sending...",
+    "backToLogin": "Back to login",
+    "passwordLength": "Password must be at least 6 characters."
+  },
+  "profile": {
+    "title": "My Profile",
+    "name": "Name",
+    "email": "Email",
+    "xp": "XP",
+    "level": "Level",
+    "lang": "Language",
+    "edit": "Edit Profile",
+    "changePwd": "Change Password",
+    "logout": "Logout",
+    "bio": "Bio",
+    "phone": "Phone",
+    "whatsapp": "WhatsApp",
+    "country": "Country",
+    "birthDate": "Birth Date",
+    "save": "Save",
+    "cancel": "Cancel",
+    "uploadAvatar": "Change Photo",
+    "personalInfo": "Personal Information",
+    "progress": "Your Progress",
+    "totalXP": "Total XP",
+    "currentLevel": "Current Level",
+    "preferredLang": "Preferred Language",
+    "xpProgress": "XP Progress"
+  },
+  "gamification": {
+    "levels": {
+      "1": "Beginner",
+      "2": "Apprentice",
+      "3": "Explorer",
+      "4": "Expert",
+      "5": "Master"
+    }
+  },
+  "toast": {
+    "success": "Success",
+    "error": "An error occurred",
+    "access_denied": "Access Denied",
+    "no_permission": "You do not have permission to view this.",
+    "fill_fields": "Please fill out all required fields.",
+    "product_saved": "Product saved successfully.",
+    "product_deleted": "Product deleted successfully."
+  },
+  "buttons": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "back": "Back"
+  },
+  "forms": {
+    "name": "Full Name",
+    "email": "Email",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "create_account": "Create Account",
+    "has_account": "Already have an account?",
+    "login_link": "Log in here",
+    "forgot_password": "Forgot your password?",
+    "remember_me": "Remember me",
+    "no_account": "Don't have an account yet?",
+    "display_name": "Display Name",
+    "pref_language": "Preferred Language",
+    "profile_pic": "Profile Photo",
+    "profile_pic_desc": "Upload a JPG, PNG or WebP image. Max 5 MB.",
+    "notifications": "Email Notifications",
+    "notifications_desc": "Receive updates about new products and announcements."
+  },
+  "modals": {
+    "emailConfirmation": {
+      "title": "Check your email!",
+      "message": "We sent a confirmation link to",
+      "message_end": "Click the link in the email to activate your account and start learning.",
+      "tip": "Didn't receive it? Check your spam or junk folder. It may take a few minutes.",
+      "button": "Go to Login"
+    }
+  }
+}

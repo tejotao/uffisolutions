@@ -1,0 +1,180 @@
+
+{
+  "home": {
+    "title": "Conhecimento que",
+    "titleHighlight": "gera resultado",
+    "subtitle": "Do conhecimento à conquista — aprenda, importe e evolua.",
+    "cta": {
+      "catalog": "Ver Catálogo",
+      "learnMore": "Saiba Mais"
+    },
+    "stats": {
+      "courses": "CURSOS",
+      "categories": "CATEGORIAS",
+      "digital": "DIGITAL",
+      "languages": "IDIOMAS"
+    },
+    "exploreByCategory": "Explorar por Categoria"
+  },
+  "catalog": {
+    "searchPlaceholder": "Buscar cursos...",
+    "all": "Todos",
+    "noProducts": "Nenhum produto encontrado.",
+    "productsFound": "produto(s)",
+    "buyNow": "Comprar Agora",
+    "getFree": "Obter Grátis",
+    "comingSoon": "Em breve"
+  },
+  "nav": {
+    "home": "Início",
+    "catalog": "Catálogo",
+    "myProducts": "Meus Produtos"
+  },
+  "header": {
+    "home": "Início",
+    "catalog": "Catálogo",
+    "myProducts": "Meus Produtos",
+    "dashboard": "Dashboard",
+    "login": "Entrar",
+    "logout": "Sair",
+    "myAccount": "Minha Conta"
+  },
+  "footer": {
+    "navigation": "Navegação",
+    "legal": "Legal",
+    "social": "Redes Sociais",
+    "links": {
+      "home": "Início",
+      "catalog": "Catálogo",
+      "dashboard": "Dashboard",
+      "terms": "Termos de Uso",
+      "privacy": "Política de Privacidade",
+      "contact": "Contato"
+    },
+    "company": "Uffisphere HTJS Ltd.",
+    "companyNumber": "Número da Empresa: 16827147",
+    "companyLocation": "Registrada na Inglaterra e País de Gales",
+    "copyright": "© 2026 UffiSolutions Ltd. by tjsnitram ®"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Olá, {{name}} 👋",
+    "welcomeSub": "Bem-vindo ao seu painel de aprendizado.",
+    "myCourses": "Meus Cursos",
+    "freeCourses": "Cursos Adquiridos",
+    "paidCourses": "Cursos Pagos",
+    "coursesDescription": "Seu conhecimento adquirido.",
+    "accelerateEvolution": "Acelere a Evolução",
+    "moreCourses": "Explore mais cursos para acelerar sua jornada.",
+    "noCourses": "Você ainda não possui cursos.",
+    "exploreCatalog": "Explore nosso catálogo e comece sua jornada de aprendizado hoje.",
+    "watchNow": "Acessar",
+    "learnMore": "Saiba Mais",
+    "secureSpot": "Comprar Agora",
+    "unlocked": "Unlocked",
+    "locked": "Locked",
+    "comingSoon": "Em breve"
+  },
+  "auth": {
+    "login": "Entrar",
+    "loginBtn": "Entrar na Conta",
+    "logout": "Sair",
+    "email": "E-mail",
+    "whatsapp": "WhatsApp",
+    "password": "Senha",
+    "confirmPassword": "Confirmar Senha",
+    "forgotPassword": "Esqueceu a senha?",
+    "createAccount": "Criar Conta",
+    "createAccountBtn": "Cadastrar-se",
+    "signUp": "Cadastre-se",
+    "fullName": "Nome Completo",
+    "prefLang": "Idioma Preferido",
+    "needAccount": "Ainda não tem conta?",
+    "alreadyHaveAccount": "Já possui uma conta?",
+    "loginHere": "Faça login aqui",
+    "signUpSuccess": "Conta criada com sucesso!",
+    "redirecting": "Redirecionando...",
+    "resetPassword": "Recuperar Senha",
+    "resetInstructions": "Insira seu email para receber um link de recuperação.",
+    "sendResetLink": "Enviar link",
+    "sending": "Enviando...",
+    "backToLogin": "Voltar para o login",
+    "passwordLength": "A senha deve ter pelo menos 6 caracteres."
+  },
+  "profile": {
+    "title": "Meu Perfil",
+    "name": "Nome",
+    "email": "E-mail",
+    "xp": "XP",
+    "level": "Nível",
+    "lang": "Idioma",
+    "edit": "Editar Perfil",
+    "changePwd": "Alterar Senha",
+    "logout": "Sair",
+    "bio": "Biografia",
+    "phone": "Telefone",
+    "whatsapp": "WhatsApp",
+    "country": "País",
+    "birthDate": "Data de Nascimento",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "uploadAvatar": "Mudar Foto",
+    "personalInfo": "Informações Pessoais",
+    "progress": "Seu Progresso",
+    "totalXP": "XP Total",
+    "currentLevel": "Nível Atual",
+    "preferredLang": "Idioma Preferido",
+    "xpProgress": "Progresso de XP"
+  },
+  "gamification": {
+    "levels": {
+      "1": "Iniciante",
+      "2": "Aprendiz",
+      "3": "Explorador",
+      "4": "Especialista",
+      "5": "Mestre"
+    }
+  },
+  "toast": {
+    "success": "Sucesso",
+    "error": "Ocorreu um erro",
+    "access_denied": "Acesso Negado",
+    "no_permission": "Você não tem permissão para visualizar isso.",
+    "fill_fields": "Por favor, preencha os campos obrigatórios.",
+    "product_saved": "Produto salvo com sucesso.",
+    "product_deleted": "Produto excluído com sucesso."
+  },
+  "buttons": {
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "create": "Criar",
+    "back": "Voltar"
+  },
+  "forms": {
+    "name": "Nome Completo",
+    "email": "E-mail",
+    "password": "Senha",
+    "confirm_password": "Confirmar Senha",
+    "create_account": "Criar Conta",
+    "has_account": "Já possui uma conta?",
+    "login_link": "Faça login aqui",
+    "forgot_password": "Esqueceu a senha?",
+    "remember_me": "Lembrar-me",
+    "no_account": "Ainda não tem uma conta?",
+    "display_name": "Nome de Exibição",
+    "pref_language": "Idioma Preferido",
+    "profile_pic": "Foto de Perfil",
+    "profile_pic_desc": "Envie uma imagem JPG, PNG ou WebP. Máximo 5 MB.",
+    "notifications": "Notificações por E-mail",
+    "notifications_desc": "Receba atualizações sobre novos produtos e anúncios."
+  },
+  "modals": {
+    "emailConfirmation": {
+      "title": "Verifique seu e-mail!",
+      "message": "Enviamos um link de confirmação para",
+      "message_end": "Clique no link do e-mail para ativar sua conta e começar a aprender.",
+      "tip": "Não recebeu? Verifique sua pasta de spam ou lixo eletrônico. Pode levar alguns minutos.",
+      "button": "Ir para o Login"
+    }
+  }
+}

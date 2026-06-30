@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://uffisolutions.com/sitemap.xml
