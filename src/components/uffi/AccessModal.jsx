@@ -237,27 +237,62 @@ function DeliverableItem({ item, groupConfig, idx, totalInGroup }) {
   const url       = safeUrl(item.url);
   const label     = item.label || (totalInGroup > 1 ? `${groupConfig.label} ${idx + 1}` : groupConfig.label);
 
-  // ── YouTube — thumbnail lazy embed ──
+  // ── YouTube — thumbnail + open in new tab (no embed) ──
   if (provider === 'youtube' || (!provider && url && (url.includes('youtube.com') || url.includes('youtu.be')))) {
     const embedUrl = getYouTubeEmbedUrl(url);
     const ytId     = embedUrl ? embedUrl.split('/embed/')[1]?.split('?')[0] : null;
     const thumb    = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null;
+    if (!url) return <ContentPending label={label} />;
     return (
       <div className="space-y-2">
         {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
-        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9"
-          thumbnail={thumb} externalUrl={url} />
+        <a href={url} target="_blank" rel="noopener noreferrer" className="block group">
+          <div className="relative rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 cursor-pointer" style={{ aspectRatio: '16/9' }}>
+            {thumb ? (
+              <img src={thumb} alt={label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center">
+                <Play size={36} className="text-zinc-600" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-colors flex items-center justify-center">
+              <div className="w-14 h-14 rounded-full bg-white/95 group-hover:bg-white group-hover:scale-110 transition-all flex items-center justify-center shadow-2xl">
+                <Play size={22} className="text-zinc-900 fill-zinc-900 ml-1" />
+              </div>
+            </div>
+            {label && (
+              <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent">
+                <p className="text-white text-xs font-semibold truncate">{label}</p>
+              </div>
+            )}
+            <div className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
+              YouTube
+            </div>
+          </div>
+        </a>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+          <ExternalLink size={11} /> Open on YouTube
+        </a>
       </div>
     );
   }
 
-  // ── Vimeo — thumbnail lazy embed ──
+  // ── Vimeo — thumbnail + open in new tab ──
   if (provider === 'vimeo' || (!provider && url?.includes('vimeo.com'))) {
-    const embedUrl = getVimeoEmbedUrl(url);
+    if (!url) return <ContentPending label={label} />;
     return (
       <div className="space-y-2">
         {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
-        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9" externalUrl={url} />
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className={cn('w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border font-semibold text-sm transition-all', groupConfig.btnClass)}>
+          <Play size={18} className="shrink-0" />
+          <div className="flex-1 text-left">
+            <p className="font-bold text-sm">{label}</p>
+            <p className="text-[10px] opacity-60 mt-0.5">Opens on Vimeo</p>
+          </div>
+          <ExternalLink size={14} className="opacity-50" />
+        </a>
       </div>
     );
   }
