@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   X, Download, ExternalLink, Play, Globe, HardDrive,
@@ -123,43 +123,58 @@ function ContentPending({ label }) {
   );
 }
 
-// ─── Embed wrapper — lazy-load (click to play) ───────────────────────────────
-// Never auto-loads an iframe — user must click "Play".
-// This prevents X-Frame-Options errors from appearing in the modal.
+// ─── Embed wrapper — click-to-play + timeout fallback ────────────────────────
+// 1. Shows thumbnail + play button (never auto-loads iframe)
+// 2. On click: loads iframe + starts 5s timeout
+// 3. If onLoad fires within 5s → shows player
+// 4. If timeout fires before onLoad → YouTube blocked (X-Frame-Options)
+//    → shows "Open in new tab" button (never a blank or broken iframe)
 
 function EmbedFrame({ src, title, aspectRatio = '16/9', height, thumbnail, externalUrl }) {
-  const [active, setActive] = useState(false);
-  const [error,  setError]  = useState(false);
+  const [active,       setActive]       = useState(false);
+  const [loaded,       setLoaded]       = useState(false);
+  const [embedBlocked, setEmbedBlocked] = useState(false);
 
+  // Timeout: if iframe hasn't called onLoad in 5s, assume embed is blocked
+  useEffect(() => {
+    if (!active || loaded || embedBlocked) return;
+    const t = setTimeout(() => setEmbedBlocked(true), 5000);
+    return () => clearTimeout(t);
+  }, [active, loaded, embedBlocked]);
+
+  // ── No embed URL ──
   if (!src) {
-    // No embed URL but has external link — show "Open" button
-    if (externalUrl) {
-      return (
-        <a href={externalUrl} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-semibold border border-zinc-700 transition-all">
-          <ExternalLink size={15} /> Open externally
-        </a>
-      );
-    }
+    if (externalUrl) return (
+      <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-semibold border border-zinc-700 transition-all">
+        <ExternalLink size={15} /> Open externally
+      </a>
+    );
     return <ContentPending label={title} />;
   }
 
-  if (error) {
-    return (
-      <div className="space-y-2">
-        <ContentPending label="Embed not available" />
-        {externalUrl && (
-          <a href={externalUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold border border-zinc-700 transition-all">
-            <ExternalLink size={13} /> Open in {title || 'new tab'}
-          </a>
-        )}
+  // ── Embed blocked (timeout or X-Frame) ──
+  if (embedBlocked) return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-700/60 rounded-xl px-4 py-3.5">
+        <WifiOff size={16} className="text-zinc-500 shrink-0" />
+        <div>
+          <p className="text-zinc-300 font-semibold text-sm">Embed not available</p>
+          <p className="text-zinc-600 text-xs mt-0.5">The platform blocks embedding. Open directly instead.</p>
+        </div>
       </div>
-    );
-  }
+      {externalUrl && (
+        <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-semibold border border-zinc-700 transition-all">
+          <ExternalLink size={15} /> Open in new tab
+        </a>
+      )}
+    </div>
+  );
 
-  if (!active) {
-    return (
+  // ── Thumbnail / click-to-play ──
+  if (!active) return (
+    <div className="space-y-2">
       <div
         className="relative rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 cursor-pointer group"
         style={{ aspectRatio: height ? undefined : aspectRatio, height }}
@@ -172,9 +187,8 @@ function EmbedFrame({ src, title, aspectRatio = '16/9', height, thumbnail, exter
             <Play size={36} className="text-zinc-600" />
           </div>
         )}
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-          <div className="w-14 h-14 rounded-full bg-white/95 group-hover:bg-white group-hover:scale-110 transition-all flex items-center justify-center shadow-xl">
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-colors flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full bg-white/95 group-hover:bg-white group-hover:scale-110 transition-all flex items-center justify-center shadow-2xl">
             <Play size={22} className="text-zinc-900 fill-zinc-900 ml-1" />
           </div>
         </div>
@@ -184,21 +198,31 @@ function EmbedFrame({ src, title, aspectRatio = '16/9', height, thumbnail, exter
           </div>
         )}
       </div>
-    );
-  }
+      {externalUrl && (
+        <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+          <ExternalLink size={11} /> Open in new tab
+        </a>
+      )}
+    </div>
+  );
 
+  // ── Active iframe ──
   return (
     <div className="relative rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800"
       style={{ aspectRatio: height ? undefined : aspectRatio, height }}>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Loader2 size={22} className="animate-spin text-zinc-600" />
-      </div>
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center z-0">
+          <Loader2 size={22} className="animate-spin text-zinc-600" />
+        </div>
+      )}
       <iframe
         src={src}
         title={title || 'Content'}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
-        onError={() => setError(true)}
+        onLoad={() => setLoaded(true)}
+        onError={() => setEmbedBlocked(true)}
         className="w-full h-full border-0 relative z-10"
       />
     </div>
