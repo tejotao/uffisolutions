@@ -24,3 +24,11 @@ ALTER TABLE public.product_deliverables
 CREATE INDEX IF NOT EXISTS idx_product_deliverables_provider
   ON public.product_deliverables(provider)
   WHERE provider IS NOT NULL;
+
+-- 5. Add go_unlisted_at for YouTube scheduled privacy change automation
+ALTER TABLE public.product_deliverables
+  ADD COLUMN IF NOT EXISTS go_unlisted_at DATE;
+
+CREATE INDEX IF NOT EXISTS idx_product_deliverables_go_unlisted
+  ON public.product_deliverables(go_unlisted_at)
+  WHERE go_unlisted_at IS NOT NULL;

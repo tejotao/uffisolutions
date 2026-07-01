@@ -67,8 +67,9 @@ export const replaceProductDeliverables = async (productId, items) => {
         provider:   it.provider?.trim() || null,
         label:      it.label?.trim() || null,
         url:        it.url.trim(),
-        duration:   it.duration || null,
-        sort_order: idx,
+        duration:       it.duration || null,
+        go_unlisted_at: it.go_unlisted_at || null,
+        sort_order:     idx,
       }));
 
     if (rows.length === 0) return { data: [], error: null };

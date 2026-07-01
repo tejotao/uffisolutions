@@ -35,7 +35,7 @@ const PROVIDER_OPTIONS = [
 ];
 
 const getTypeConfig = (val) => PRODUCT_TYPES.find((t) => t.value === val) || PRODUCT_TYPES[4];
-const emptyDeliverable = () => ({ type: 'other', provider: '', label: '', url: '' });
+const emptyDeliverable = () => ({ type: 'other', provider: '', label: '', url: '', go_unlisted_at: '' });
 
 const getLanguageFlag = (lang) => {
   if (!lang) return '🌐';
@@ -131,6 +131,7 @@ export default function AdminProducts({ user }) {
         stripe_link:  product.stripe_payment_link || product.stripe_link || '',
         deliverables: (deliverablesMap.get(product.id) || []).map((d) => ({
           id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url,
+          go_unlisted_at: d.go_unlisted_at || '',
         })),
       });
       setIsModalOpen(true);
@@ -139,7 +140,10 @@ export default function AdminProducts({ user }) {
       const fresh = await getDeliverablesForProduct(product.id);
       setFormData((p) => ({
         ...p,
-        deliverables: fresh.map((d) => ({ id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url })),
+        deliverables: fresh.map((d) => ({
+          id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url,
+          go_unlisted_at: d.go_unlisted_at || '',
+        })),
       }));
       setLoadingDeliverables(false);
     } else {
@@ -673,6 +677,7 @@ export default function AdminProducts({ user }) {
                                     placeholder={
                                       t.value === 'pdf'      ? 'https://docs.google.com/...' :
                                       t.value === 'video'    ? 'https://youtube.com/watch?v=...' :
+                                      t.value === 'audio'    ? 'https://open.spotify.com/...' :
                                       t.value === 'drive'    ? 'https://drive.google.com/...' :
                                       'https://...'
                                     }
@@ -681,6 +686,24 @@ export default function AdminProducts({ user }) {
                                       'w-full bg-zinc-950 border rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition-colors placeholder-zinc-700',
                                       item.url ? cn(t.color, 'border-opacity-40', t.border) : 'border-zinc-800 focus:border-amber-500'
                                     )} />
+
+                                  {/* go_unlisted_at — only for YouTube */}
+                                  {(item.provider === 'youtube' || (item.url || '').includes('youtube') || (item.url || '').includes('youtu.be')) && (
+                                    <div className="flex items-center gap-2 bg-zinc-950/60 border border-zinc-800 rounded-lg px-3 py-2">
+                                      <span className="text-[10px] text-zinc-500 shrink-0">🔒 Make unlisted on</span>
+                                      <input
+                                        type="date"
+                                        value={item.go_unlisted_at || ''}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        onChange={(e) => updateDeliverable(idx, 'go_unlisted_at', e.target.value)}
+                                        className="flex-1 bg-transparent text-zinc-300 text-xs focus:outline-none"
+                                      />
+                                      {item.go_unlisted_at && (
+                                        <button type="button" onClick={() => updateDeliverable(idx, 'go_unlisted_at', '')}
+                                          className="text-zinc-600 hover:text-zinc-400 text-[10px]">✕</button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
