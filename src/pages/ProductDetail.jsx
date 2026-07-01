@@ -1,12 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, CheckCircle2, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { fetchAllProducts } from '@/lib/catalogQueries';
+import { getUserPurchases } from '@/lib/purchaseQueries';
+import { getMyActiveAccesses, grantProductAccess } from '@/lib/accessQueries';
+import { getDeliverablesForProduct } from '@/lib/deliverableQueries';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
+import AccessModal from '@/components/uffi/AccessModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ProductDetail({ user }) {
@@ -15,10 +19,14 @@ export default function ProductDetail({ user }) {
   const { toast } = useToast();
   const { language, t } = useLanguage();
   
-  const [product, setProduct] = useState(null);
+  const [product, setProduct]           = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [loading, setLoading]           = useState(true);
+  const [isFavorite, setIsFavorite]     = useState(false);
+  const [hasAccess, setHasAccess]       = useState(false);
+  const [isGranting, setIsGranting]     = useState(false);
+  const [deliverables, setDeliverables] = useState([]);
+  const [accessProduct, setAccessProduct] = useState(null); // opens modal
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -26,28 +34,39 @@ export default function ProductDetail({ user }) {
       try {
         const products = await fetchAllProducts('all');
         const found = products.find(p => p.id === id || p.slug === id);
-        
+
         if (found) {
           setProduct(found);
           const related = products.filter(p => {
-             const pLang = (p.language || 'en').toLowerCase();
-             return p.category_id === found.category_id && 
-                    p.id !== found.id && 
-                    pLang.includes(language);
+            const pLang = (p.language || 'en').toLowerCase();
+            return p.category_id === found.category_id && p.id !== found.id && pLang.includes(language);
           }).slice(0, 3);
           setRelatedProducts(related);
+
+          // Check user access + load deliverables in parallel
+          if (user) {
+            const [purchases, accesses, delivs] = await Promise.all([
+              getUserPurchases(user.email),
+              getMyActiveAccesses(user.id),
+              getDeliverablesForProduct(found.id),
+            ]);
+            const purchasedIds = new Set((purchases || []).map(p => p.product_id));
+            const accessIds    = new Set((accesses  || []).map(a => a.id));
+            setHasAccess(purchasedIds.has(found.id) || accessIds.has(found.id));
+            setDeliverables(delivs);
+          }
         } else {
           setProduct(null);
         }
       } catch (error) {
-        console.error("Error loading product:", error);
+        console.error('Error loading product:', error);
       } finally {
         setLoading(false);
       }
     };
 
     if (id) loadProduct();
-  }, [id, language]);
+  }, [id, language, user]);
 
   const getLanguageFlag = (lang) => {
     if (!lang) return '🌐';
@@ -67,13 +86,33 @@ export default function ProductDetail({ user }) {
     });
   };
 
-  const handleAction = () => {
-    if (product.stripe_link || product.stripe_payment_link) {
-      window.open(product.stripe_link || product.stripe_payment_link, '_blank');
-    } else {
-      toast({ title: t('toast.error'), description: t('detail.not_found_desc'), variant: 'destructive' });
+  const handleBuy = () => {
+    const link = product.stripe_link || product.stripe_payment_link;
+    if (link) { window.open(link, '_blank'); }
+    else { toast({ title: t('toast.error'), description: 'Payment link not configured yet.', variant: 'destructive' }); }
+  };
+
+  const handleFreeAccess = async () => {
+    if (!user) { navigate('/register'); return; }
+    setIsGranting(true);
+    try {
+      const { error } = await grantProductAccess({
+        userId: user.id, productId: product.id,
+        expiryDate: null, grantedBy: user.id, notes: 'Self-claimed free product',
+      });
+      if (error) throw error;
+      setHasAccess(true);
+      toast({ title: '🎁 Access granted!', description: 'Added to your library.', className: 'border-emerald-500 bg-zinc-900 text-white' });
+      setAccessProduct({ ...product, _deliverables: deliverables });
+    } catch {
+      toast({ title: t('toast.error'), description: 'Could not grant access. Try again.', variant: 'destructive' });
+    } finally {
+      setIsGranting(false);
     }
   };
+
+  const openAccessModal = () =>
+    setAccessProduct({ ...product, _deliverables: deliverables });
 
   if (loading) {
     return (
@@ -111,6 +150,12 @@ export default function ProductDetail({ user }) {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans selection:bg-[#f59e0b]/30">
+      <AnimatePresence>
+        {accessProduct && (
+          <AccessModal product={accessProduct} onClose={() => setAccessProduct(null)} />
+        )}
+      </AnimatePresence>
+
       <Header user={user} isAdminPage={false} />
       
       <main className="flex-grow pt-24 pb-16">
@@ -212,30 +257,47 @@ export default function ProductDetail({ user }) {
                     </div>
                   </div>
 
+                  {/* ── Action button — context-aware ── */}
                   {isFree ? (
                     !user ? (
-                      <button
-                        onClick={() => navigate('/login')}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#10b981] hover:bg-[#059669] text-black hover:scale-[1.02] active:scale-[0.98] mb-4"
-                      >
-                        🔓 Acessar Agora
+                      /* Guest + Free → register to get access */
+                      <button onClick={() => navigate('/register')}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#10b981] hover:bg-[#059669] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
+                        🎁 Get Free Access
+                      </button>
+                    ) : hasAccess ? (
+                      /* Logged in + has access → open modal */
+                      <button onClick={openAccessModal}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
+                        <Play size={22} className="fill-black" /> {t('detail.access')}
                       </button>
                     ) : (
-                      <button
-                        onClick={() => navigate('/dashboard')}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#10b981] hover:bg-[#059669] text-black hover:scale-[1.02] active:scale-[0.98] mb-4"
-                      >
-                        ✅ Ir para Meus Produtos
+                      /* Logged in + free + no access yet → grant */
+                      <button onClick={handleFreeAccess} disabled={isGranting}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#10b981] hover:bg-[#059669] text-black hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 mb-4">
+                        {isGranting ? <Loader2 size={22} className="animate-spin" /> : '🎁 Get Free Access'}
                       </button>
                     )
                   ) : (
-                    <button
-                      onClick={handleAction}
-                      className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] mb-4 bg-[#f59e0b] hover:bg-[#d97706] text-black"
-                    >
-                      <ShoppingCart size={24} />
-                      {t('detail.buy_now')}
-                    </button>
+                    !user ? (
+                      /* Guest + Paid → buy */
+                      <button onClick={handleBuy}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
+                        <ShoppingCart size={24} /> {t('detail.buy_now')}
+                      </button>
+                    ) : hasAccess ? (
+                      /* Logged in + paid + has access → open modal */
+                      <button onClick={openAccessModal}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
+                        <Play size={22} className="fill-black" /> {t('detail.access')}
+                      </button>
+                    ) : (
+                      /* Logged in + paid + no access → buy */
+                      <button onClick={handleBuy}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
+                        <ShoppingCart size={24} /> {t('detail.buy_now')}
+                      </button>
+                    )
                   )}
 
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">

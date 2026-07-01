@@ -2,10 +2,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Play } from 'lucide-react';
+import { Play, CheckCircle } from 'lucide-react';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import { fetchAllProducts } from '@/lib/catalogQueries';
+import { getUserPurchases } from '@/lib/purchaseQueries';
+import { getMyActiveAccesses } from '@/lib/accessQueries';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ProductsPage({ user }) {
@@ -13,6 +15,7 @@ export default function ProductsPage({ user }) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllProducts, setShowAllProducts] = useState(true);
+  const [accessibleIds, setAccessibleIds] = useState(new Set());
   
   const navigate = useNavigate();
   const { language, t, userChangedLanguage } = useLanguage();
@@ -33,6 +36,18 @@ export default function ProductsPage({ user }) {
       try {
         const prods = await fetchAllProducts('all');
         setProducts(prods || []);
+
+        if (user) {
+          const [purchases, accesses] = await Promise.all([
+            getUserPurchases(user.email),
+            getMyActiveAccesses(user.id),
+          ]);
+          const ids = new Set([
+            ...(purchases || []).map(p => p.product_id),
+            ...(accesses  || []).map(a => a.id),
+          ]);
+          setAccessibleIds(ids);
+        }
       } catch (err) {
         console.error('❌ Error loading products:', err);
       } finally {
@@ -40,7 +55,7 @@ export default function ProductsPage({ user }) {
       }
     };
     loadProducts();
-  }, []);
+  }, [user]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
@@ -106,7 +121,8 @@ export default function ProductsPage({ user }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               <AnimatePresence mode="popLayout">
                 {filteredProducts.map((product, index) => {
-                  const isFree = product.is_free || parseFloat(product.price) === 0 || !product.price;
+                  const isFree    = product.is_free || parseFloat(product.price) === 0 || !product.price;
+                  const inLibrary = accessibleIds.has(product.id);
 
                   return (
                     <motion.div
@@ -116,14 +132,21 @@ export default function ProductsPage({ user }) {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <div 
+                      <div
                         className={`bg-[#141414] border rounded-2xl overflow-hidden transition-colors group flex flex-col h-full cursor-pointer ${isFree ? 'border-green-500/40 hover:border-green-500/80 shadow-[0_0_15px_rgba(34,197,94,0.05)] hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
-                        onClick={() => navigate(isFree && !user ? '/login' : `/products/${product.id}`)}
+                        onClick={() => navigate(`/products/${product.id}`)}
                       >
                         <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">
-                          {isFree && (
+                          {/* Free badge */}
+                          {isFree && !inLibrary && (
                             <div className="absolute top-2 left-2 bg-green-500 text-black px-2 py-1 rounded text-sm font-black z-10 shadow-lg">
                               🎁 Free
+                            </div>
+                          )}
+                          {/* In Library badge */}
+                          {inLibrary && (
+                            <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-500 text-black px-2 py-1 rounded text-xs font-black z-10 shadow-lg">
+                              <CheckCircle size={11} /> In Library
                             </div>
                           )}
                           {product.image_url ? (
@@ -138,14 +161,16 @@ export default function ProductsPage({ user }) {
                           </div>
                         </div>
                         <div className="p-5 flex flex-col flex-grow">
-                          <h3 className={`font-bold text-white mb-2 line-clamp-2 transition-colors ${isFree ? 'group-hover:text-green-400' : 'group-hover:text-[#f59e0b]'}`}>{product.title || product.name}</h3>
+                          <h3 className={`font-bold text-white mb-2 line-clamp-2 transition-colors ${inLibrary ? 'group-hover:text-amber-400' : isFree ? 'group-hover:text-green-400' : 'group-hover:text-[#f59e0b]'}`}>
+                            {product.title || product.name}
+                          </h3>
                           <p className="text-sm text-gray-400 line-clamp-2 mb-4 flex-grow">{product.description}</p>
                           <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#2a2a2a]">
                             <span className="font-black text-white">
                               {isFree ? <span className="text-green-500">{t('product.free')}</span> : `£${Number(product.price).toFixed(2)}`}
                             </span>
-                            <span className={`font-bold text-sm px-3 py-1 rounded-lg ${isFree ? 'text-green-500 bg-green-500/10' : 'text-[#f59e0b] bg-[#f59e0b]/10'}`}>
-                              {t('product.learn_more')}
+                            <span className={`font-bold text-sm px-3 py-1 rounded-lg flex items-center gap-1 ${inLibrary ? 'text-amber-400 bg-amber-500/10' : isFree ? 'text-green-500 bg-green-500/10' : 'text-[#f59e0b] bg-[#f59e0b]/10'}`}>
+                              {inLibrary ? <><CheckCircle size={11} /> Access</> : t('product.learn_more')}
                             </span>
                           </div>
                         </div>
