@@ -1,33 +1,35 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   X, Download, ExternalLink, Play, Globe, HardDrive,
-  FileText, AlertCircle, Lock, Unlock, Clock,
+  FileText, AlertCircle, Lock, Unlock, Clock, Music,
+  Loader2, WifiOff,
 } from 'lucide-react';
 import { isAccessValid, daysUntilExpiry } from '@/lib/accessQueries';
 import { cn } from '@/lib/utils';
 
-// ─── Delivery config ──────────────────────────────────────────────────────────
+// ─── Type + provider config ───────────────────────────────────────────────────
 
 export const DELIVERY_CONFIG = {
-  pdf:      { label: 'Download PDF',      groupLabel: 'PDFs',            icon: FileText,     btnClass: 'bg-red-500/10 text-red-300 border-red-500/30 hover:bg-red-500/20'           },
-  video:    { label: 'Watch Video',       groupLabel: 'Videos',          icon: Play,         btnClass: 'bg-blue-500/10 text-blue-300 border-blue-500/30 hover:bg-blue-500/20'         },
+  pdf:      { label: 'Download PDF',      groupLabel: 'PDFs',            icon: FileText,  btnClass: 'bg-red-500/10 text-red-300 border-red-500/30 hover:bg-red-500/20'               },
+  video:    { label: 'Watch Video',       groupLabel: 'Videos',          icon: Play,      btnClass: 'bg-blue-500/10 text-blue-300 border-blue-500/30 hover:bg-blue-500/20'           },
+  audio:    { label: 'Listen',            groupLabel: 'Audio',           icon: Music,     btnClass: 'bg-pink-500/10 text-pink-300 border-pink-500/30 hover:bg-pink-500/20'           },
   external: { label: 'Open Platform',     groupLabel: 'External Links',  icon: ExternalLink, btnClass: 'bg-purple-500/10 text-purple-300 border-purple-500/30 hover:bg-purple-500/20' },
-  drive:    { label: 'Open Google Drive', groupLabel: 'Google Drive',    icon: HardDrive,    btnClass: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20' },
-  other:    { label: 'Access Resource',   groupLabel: 'Other Resources', icon: Globe,        btnClass: 'bg-zinc-700/50 text-zinc-200 border-zinc-600/50 hover:bg-zinc-700'             },
+  drive:    { label: 'Open Google Drive', groupLabel: 'Google Drive',    icon: HardDrive, btnClass: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20' },
+  other:    { label: 'Access Resource',   groupLabel: 'Other Resources', icon: Globe,     btnClass: 'bg-zinc-700/50 text-zinc-200 border-zinc-600/50 hover:bg-zinc-700'               },
 };
 
-const TYPE_ORDER = ['pdf', 'video', 'external', 'drive', 'other'];
+export const TYPE_ORDER = ['pdf', 'video', 'audio', 'external', 'drive', 'other'];
 
 export const getDeliveryConfig = (type) =>
-  DELIVERY_CONFIG[type] || DELIVERY_CONFIG.other;
+  DELIVERY_CONFIG[(type || '').toLowerCase()] || DELIVERY_CONFIG.other;
 
-// Groups flat deliverable list into ordered { type, config, items } buckets
 export const groupDeliverablesByType = (items) => {
   const buckets = new Map();
   items.forEach((item) => {
-    const t = TYPE_ORDER.includes((item.type || '').toLowerCase()) ? item.type.toLowerCase() : 'other';
+    const t = TYPE_ORDER.includes((item.type || '').toLowerCase())
+      ? item.type.toLowerCase() : 'other';
     if (!buckets.has(t)) buckets.set(t, []);
     buckets.get(t).push(item);
   });
@@ -36,11 +38,9 @@ export const groupDeliverablesByType = (items) => {
     .map((t) => ({ type: t, config: getDeliveryConfig(t), items: buckets.get(t) }));
 };
 
-// Resolves deliverable list from product._deliverables or falls back to legacy fields
 export const resolveDeliverables = (product) => {
-  if (Array.isArray(product._deliverables) && product._deliverables.length > 0) {
+  if (Array.isArray(product._deliverables) && product._deliverables.length > 0)
     return product._deliverables;
-  }
   const legacyUrl = product.access_url || product.driveLink || product.content_url || null;
   const items = [];
   if (legacyUrl) items.push({ type: product.product_type || 'other', label: null, url: legacyUrl });
@@ -49,19 +49,59 @@ export const resolveDeliverables = (product) => {
   return items;
 };
 
+// ─── URL extractors (all return null on failure — never throw) ────────────────
+
+const safeUrl = (raw) => {
+  if (!raw || typeof raw !== 'string' || !raw.trim()) return null;
+  try { new URL(raw); return raw.trim(); } catch { return null; }
+};
+
+const getYouTubeEmbedUrl = (url) => {
+  const safe = safeUrl(url);
+  if (!safe) return null;
+  try {
+    const u = new URL(safe);
+    let id = null;
+    if (u.hostname.includes('youtu.be'))       id = u.pathname.slice(1).split('?')[0];
+    else if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v');
+    if (!id) return null;
+    return `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`;
+  } catch { return null; }
+};
+
+const getVimeoEmbedUrl = (url) => {
+  const safe = safeUrl(url);
+  if (!safe) return null;
+  try {
+    const u = new URL(safe);
+    if (!u.hostname.includes('vimeo.com')) return null;
+    const id = u.pathname.split('/').filter(Boolean).pop();
+    if (!id || !/^\d+$/.test(id)) return null;
+    return `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0`;
+  } catch { return null; }
+};
+
+const getSpotifyEmbedUrl = (url) => {
+  const safe = safeUrl(url);
+  if (!safe) return null;
+  try {
+    const u = new URL(safe);
+    if (!u.hostname.includes('spotify.com')) return null;
+    return safe.replace('open.spotify.com/', 'open.spotify.com/embed/');
+  } catch { return null; }
+};
+
 // ─── Expiry indicator ─────────────────────────────────────────────────────────
 
 function ExpiryIndicator({ expiryDate }) {
   if (!expiryDate) return null;
-  const days  = daysUntilExpiry(expiryDate);
-  const valid = days >= 0;
-  const soon  = days >= 0 && days <= 7;
-  if (!valid) return (
+  const days = daysUntilExpiry(expiryDate);
+  if (days < 0) return (
     <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
       <AlertCircle size={9} /> Expired
     </span>
   );
-  if (soon) return (
+  if (days <= 7) return (
     <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
       <Clock size={9} /> {days}d left
     </span>
@@ -69,11 +109,172 @@ function ExpiryIndicator({ expiryDate }) {
   return null;
 }
 
+// ─── Fallback state (anti-blackout) ──────────────────────────────────────────
+
+function ContentPending({ label }) {
+  return (
+    <div className="flex items-center gap-3 bg-zinc-900/80 border border-dashed border-zinc-700 rounded-xl px-4 py-3.5">
+      <WifiOff size={16} className="text-zinc-600 shrink-0" />
+      <div>
+        <p className="text-zinc-400 font-semibold text-sm">{label || 'Conteúdo em preparação'}</p>
+        <p className="text-zinc-600 text-xs mt-0.5">Este recurso estará disponível em breve.</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Embed wrapper — defensive iframe ────────────────────────────────────────
+
+function EmbedFrame({ src, title, aspectRatio = '16/9', height }) {
+  const [loaded, setLoaded] = useState(false);
+  const [error,  setError]  = useState(false);
+
+  if (!src) return <ContentPending label={title} />;
+  if (error) return <ContentPending label={title} />;
+
+  return (
+    <div className="relative rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800"
+      style={{ aspectRatio: height ? undefined : aspectRatio, height }}>
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 size={22} className="animate-spin text-zinc-600" />
+        </div>
+      )}
+      <iframe
+        src={src}
+        title={title || 'Content'}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        onLoad={() => setLoaded(true)}
+        onError={() => setError(true)}
+        className={cn(
+          'w-full h-full border-0 transition-opacity duration-300',
+          loaded ? 'opacity-100' : 'opacity-0'
+        )}
+      />
+    </div>
+  );
+}
+
+// ─── Single deliverable renderer ──────────────────────────────────────────────
+
+function DeliverableItem({ item, groupConfig, idx, totalInGroup }) {
+  const provider  = (item.provider || '').toLowerCase();
+  const type      = (item.type    || 'other').toLowerCase();
+  const url       = safeUrl(item.url);
+  const label     = item.label || (totalInGroup > 1 ? `${groupConfig.label} ${idx + 1}` : groupConfig.label);
+
+  // ── Inline YouTube embed ──
+  if (provider === 'youtube' || (!provider && url && (url.includes('youtube.com') || url.includes('youtu.be')))) {
+    const embedUrl = getYouTubeEmbedUrl(url);
+    return (
+      <div className="space-y-2">
+        {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
+        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9" />
+      </div>
+    );
+  }
+
+  // ── Inline Vimeo embed ──
+  if (provider === 'vimeo' || (!provider && url?.includes('vimeo.com'))) {
+    const embedUrl = getVimeoEmbedUrl(url);
+    return (
+      <div className="space-y-2">
+        {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
+        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9" />
+      </div>
+    );
+  }
+
+  // ── Inline Spotify embed ──
+  if (provider === 'spotify' || (!provider && url?.includes('spotify.com'))) {
+    const embedUrl = getSpotifyEmbedUrl(url);
+    return (
+      <div className="space-y-2">
+        {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
+        <EmbedFrame src={embedUrl} title={label} height="152px" aspectRatio={undefined} />
+      </div>
+    );
+  }
+
+  // ── Native HTML5 video (Supabase Storage or direct .mp4) ──
+  if (provider === 'supabase' && type === 'video') {
+    if (!url) return <ContentPending label={label} />;
+    return (
+      <div className="space-y-2">
+        {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
+        <video
+          src={url} controls preload="metadata"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-950"
+          onError={(e) => { e.target.style.display = 'none'; }}
+        />
+      </div>
+    );
+  }
+
+  // ── Native HTML5 audio (Supabase Storage or Spotify direct) ──
+  if (type === 'audio' || (provider === 'supabase' && type === 'audio')) {
+    if (!url) return <ContentPending label={label} />;
+    return (
+      <div className="space-y-2">
+        {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
+        <audio
+          src={url} controls preload="metadata"
+          className="w-full rounded-xl"
+          onError={(e) => { e.target.style.display = 'none'; }}
+        />
+      </div>
+    );
+  }
+
+  // ── PDF download ──
+  if (type === 'pdf') {
+    if (!url) return <ContentPending label={label} />;
+    return (
+      <a href={url} download target="_blank" rel="noopener noreferrer"
+        className={cn('w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border font-semibold text-sm transition-all', groupConfig.btnClass)}>
+        <FileText size={18} className="shrink-0" />
+        <div className="flex-1 text-left">
+          <p className="font-bold text-sm">{label}</p>
+          <p className="text-[10px] opacity-60 mt-0.5">Click to download your file</p>
+        </div>
+        <Download size={14} className="opacity-50" />
+      </a>
+    );
+  }
+
+  // ── Generic link button (external, drive, other, or unknown provider) ──
+  if (!url) return <ContentPending label={label} />;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      className={cn('w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border font-semibold text-sm transition-all', groupConfig.btnClass)}>
+      <groupConfig.icon size={18} className="shrink-0" />
+      <div className="flex-1 text-left">
+        <p className="font-bold text-sm">{label}</p>
+        <p className="text-[10px] opacity-60 mt-0.5">Opens in a new tab</p>
+      </div>
+      <ExternalLink size={14} className="opacity-50" />
+    </a>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AccessModal({ product, onClose }) {
-  const items       = resolveDeliverables(product);
+  // Guard: if product is null/undefined, render nothing (anti-blackout)
+  if (!product) return null;
+
+  const items        = resolveDeliverables(product);
   const groupedItems = groupDeliverablesByType(items);
+
+  // Detect if any item has an embed provider → widen the modal
+  const hasEmbed = items.some((it) => {
+    const p = (it.provider || '').toLowerCase();
+    const u = it.url || '';
+    return p === 'youtube' || p === 'vimeo' || p === 'spotify'
+      || u.includes('youtube.com') || u.includes('youtu.be')
+      || u.includes('vimeo.com') || u.includes('spotify.com');
+  });
 
   const catColor   = product.category?.color || '#f59e0b';
   const catIcon    = product.category?.icon  || product.categoryIcon || '📁';
@@ -108,7 +309,10 @@ export default function AccessModal({ product, onClose }) {
         exit={{ opacity: 0, y: 48 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md bg-zinc-950 border border-zinc-800/80 rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl"
+        className={cn(
+          'w-full bg-zinc-950 border border-zinc-800/80 rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl',
+          hasEmbed ? 'sm:max-w-2xl' : 'sm:max-w-md'
+        )}
       >
         {/* ── Colour header ── */}
         <div
@@ -133,10 +337,10 @@ export default function AccessModal({ product, onClose }) {
           )}
 
           <h2 className="text-xl font-black text-white leading-tight pr-6">
-            {product.title || product.name}
+            {product.title || product.name || 'Untitled product'}
           </h2>
 
-          <div className="flex items-center gap-3 mt-3">
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
             <span className="text-lg">{getLanguageFlag(product.language)}</span>
             {expired ? (
               <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-full">
@@ -152,7 +356,7 @@ export default function AccessModal({ product, onClose }) {
         </div>
 
         {/* ── Delivery section ── */}
-        <div className="px-5 pb-6 pt-4 space-y-5">
+        <div className="px-5 pb-6 pt-4 space-y-5 max-h-[70vh] overflow-y-auto">
           <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
             <span className="w-3 h-px bg-zinc-700 inline-block" />
             How to access your content
@@ -168,50 +372,34 @@ export default function AccessModal({ product, onClose }) {
               </div>
             </div>
           ) : items.length > 0 ? (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {groupedItems.map((group) => (
-                <div key={group.type} className="space-y-2">
+                <div key={group.type} className="space-y-3">
                   {groupedItems.length > 1 && (
                     <div className="flex items-center gap-2">
                       <group.config.icon size={12} className="shrink-0 opacity-60 text-zinc-500" />
                       <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                         {group.config.groupLabel}
                       </p>
-                      <span className="text-[9px] text-zinc-700 bg-zinc-900 px-1.5 py-0.5 rounded-full">{group.items.length}</span>
+                      <span className="text-[9px] text-zinc-700 bg-zinc-900 px-1.5 py-0.5 rounded-full">
+                        {group.items.length}
+                      </span>
                     </div>
                   )}
-                  {group.items.map((item, idx) => {
-                    const isPdf  = group.type === 'pdf';
-                    const label  = item.label || (group.items.length > 1 ? `${group.config.label} ${idx + 1}` : group.config.label);
-                    return (
-                      <a
-                        key={item.id || `${group.type}-${idx}`}
-                        href={item.url}
-                        download={isPdf || undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn('w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border font-semibold text-sm transition-all', group.config.btnClass)}
-                      >
-                        <group.config.icon size={18} className="shrink-0" />
-                        <div className="flex-1 text-left">
-                          <p className="font-bold text-sm">{label}</p>
-                          <p className="text-[10px] opacity-60 mt-0.5">{isPdf ? 'Click to download your file' : 'Opens in a new tab'}</p>
-                        </div>
-                        {isPdf ? <Download size={14} className="opacity-50" /> : <ExternalLink size={14} className="opacity-50" />}
-                      </a>
-                    );
-                  })}
+                  {group.items.map((item, idx) => (
+                    <DeliverableItem
+                      key={item.id || `${group.type}-${idx}`}
+                      item={item}
+                      groupConfig={group.config}
+                      idx={idx}
+                      totalInGroup={group.items.length}
+                    />
+                  ))}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-4 text-sm">
-              <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-zinc-300 font-semibold text-sm">Content not yet available</p>
-                <p className="text-zinc-500 text-xs mt-1">The delivery link hasn't been configured yet. Please contact support.</p>
-              </div>
-            </div>
+            <ContentPending label="Content not yet available" />
           )}
 
           <p className="text-[10px] text-zinc-600 text-center pt-1">

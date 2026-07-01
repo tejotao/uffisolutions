@@ -4,10 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Edit2, Trash2, X, Search, Package, Star, Check, Filter,
   AlertTriangle, Globe, FileText, Video, ExternalLink, HardDrive,
-  Lock, ChevronRight, Eye, Loader2, Image,
+  Lock, ChevronRight, Eye, Loader2, Image, Music,
 } from 'lucide-react';
 import { fetchAllProductsAllLanguages, fetchAllCategories, createProduct, updateProduct, deleteProduct } from '@/lib/catalogQueries';
-import { getDeliverablesForProduct, getDeliverablesForProducts, replaceProductDeliverables } from '@/lib/deliverableQueries';
+import { getDeliverablesForProduct, getDeliverablesForProducts, replaceProductDeliverables, DELIVERABLE_PROVIDERS } from '@/lib/deliverableQueries';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { canAccess } from '@/lib/rolePermissions';
@@ -18,13 +18,24 @@ import { cn } from '@/lib/utils';
 const PRODUCT_TYPES = [
   { value: 'pdf',      label: 'PDF',          icon: FileText,     color: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/30',    desc: 'Downloadable PDF document' },
   { value: 'video',    label: 'Video',         icon: Video,        color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   desc: 'YouTube, Vimeo or any video URL' },
+  { value: 'audio',    label: 'Audio',         icon: Music,        color: 'text-pink-400',   bg: 'bg-pink-500/10',   border: 'border-pink-500/30',   desc: 'Spotify, podcast or audio file' },
   { value: 'external', label: 'External',      icon: ExternalLink, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', desc: 'External platform or page' },
   { value: 'drive',    label: 'Google Drive',  icon: HardDrive,    color: 'text-emerald-400',bg: 'bg-emerald-500/10',border: 'border-emerald-500/30',desc: 'Google Drive folder or file' },
   { value: 'other',    label: 'Other',         icon: Globe,        color: 'text-zinc-400',   bg: 'bg-zinc-500/10',   border: 'border-zinc-500/30',   desc: 'Any other content type' },
 ];
 
+const PROVIDER_OPTIONS = [
+  { value: '',         label: '— Auto detect —' },
+  { value: 'youtube',  label: '▶ YouTube' },
+  { value: 'vimeo',    label: '▶ Vimeo' },
+  { value: 'spotify',  label: '🎵 Spotify' },
+  { value: 'supabase', label: '☁ Supabase Storage' },
+  { value: 'drive',    label: '💾 Google Drive' },
+  { value: 'external', label: '🔗 External Link' },
+];
+
 const getTypeConfig = (val) => PRODUCT_TYPES.find((t) => t.value === val) || PRODUCT_TYPES[4];
-const emptyDeliverable = () => ({ type: 'other', label: '', url: '' });
+const emptyDeliverable = () => ({ type: 'other', provider: '', label: '', url: '' });
 
 const getLanguageFlag = (lang) => {
   if (!lang) return '🌐';
@@ -119,7 +130,7 @@ export default function AdminProducts({ user }) {
         active:       product.active ?? true,
         stripe_link:  product.stripe_payment_link || product.stripe_link || '',
         deliverables: (deliverablesMap.get(product.id) || []).map((d) => ({
-          id: d.id, type: d.type, label: d.label || '', url: d.url,
+          id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url,
         })),
       });
       setIsModalOpen(true);
@@ -128,7 +139,7 @@ export default function AdminProducts({ user }) {
       const fresh = await getDeliverablesForProduct(product.id);
       setFormData((p) => ({
         ...p,
-        deliverables: fresh.map((d) => ({ id: d.id, type: d.type, label: d.label || '', url: d.url })),
+        deliverables: fresh.map((d) => ({ id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url })),
       }));
       setLoadingDeliverables(false);
     } else {
@@ -645,6 +656,14 @@ export default function AdminProducts({ user }) {
                                       <Trash2 size={13} />
                                     </button>
                                   </div>
+
+                                  {/* Provider select */}
+                                  <select value={item.provider || ''} onChange={(e) => updateDeliverable(idx, 'provider', e.target.value)}
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-zinc-600 transition-colors appearance-none">
+                                    {PROVIDER_OPTIONS.map((o) => (
+                                      <option key={o.value} value={o.value}>{o.label}</option>
+                                    ))}
+                                  </select>
 
                                   <input type="text" value={item.label} placeholder={`Label (optional) — e.g. "${t.label} — Module 1"`}
                                     onChange={(e) => updateDeliverable(idx, 'label', e.target.value)}

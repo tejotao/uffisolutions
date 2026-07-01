@@ -1,7 +1,8 @@
 
 import { supabase } from './supabaseClient';
 
-export const DELIVERABLE_TYPES = ['pdf', 'video', 'external', 'drive', 'other'];
+export const DELIVERABLE_TYPES = ['pdf', 'video', 'audio', 'external', 'drive', 'other'];
+export const DELIVERABLE_PROVIDERS = ['youtube', 'vimeo', 'spotify', 'supabase', 'drive', 'external'];
 
 // ─── Reads ──────────────────────────────────────────────────────────────────
 
@@ -62,9 +63,11 @@ export const replaceProductDeliverables = async (productId, items) => {
       .filter((it) => it.url && it.url.trim())
       .map((it, idx) => ({
         product_id: productId,
-        type: DELIVERABLE_TYPES.includes(it.type) ? it.type : 'other',
-        label: it.label?.trim() || null,
-        url: it.url.trim(),
+        type:       DELIVERABLE_TYPES.includes(it.type) ? it.type : 'other',
+        provider:   it.provider?.trim() || null,
+        label:      it.label?.trim() || null,
+        url:        it.url.trim(),
+        duration:   it.duration || null,
         sort_order: idx,
       }));
 
