@@ -123,34 +123,83 @@ function ContentPending({ label }) {
   );
 }
 
-// ─── Embed wrapper — defensive iframe ────────────────────────────────────────
+// ─── Embed wrapper — lazy-load (click to play) ───────────────────────────────
+// Never auto-loads an iframe — user must click "Play".
+// This prevents X-Frame-Options errors from appearing in the modal.
 
-function EmbedFrame({ src, title, aspectRatio = '16/9', height }) {
-  const [loaded, setLoaded] = useState(false);
+function EmbedFrame({ src, title, aspectRatio = '16/9', height, thumbnail, externalUrl }) {
+  const [active, setActive] = useState(false);
   const [error,  setError]  = useState(false);
 
-  if (!src) return <ContentPending label={title} />;
-  if (error) return <ContentPending label={title} />;
+  if (!src) {
+    // No embed URL but has external link — show "Open" button
+    if (externalUrl) {
+      return (
+        <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-semibold border border-zinc-700 transition-all">
+          <ExternalLink size={15} /> Open externally
+        </a>
+      );
+    }
+    return <ContentPending label={title} />;
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <ContentPending label="Embed not available" />
+        {externalUrl && (
+          <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold border border-zinc-700 transition-all">
+            <ExternalLink size={13} /> Open in {title || 'new tab'}
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  if (!active) {
+    return (
+      <div
+        className="relative rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 cursor-pointer group"
+        style={{ aspectRatio: height ? undefined : aspectRatio, height }}
+        onClick={() => setActive(true)}
+      >
+        {thumbnail ? (
+          <img src={thumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center">
+            <Play size={36} className="text-zinc-600" />
+          </div>
+        )}
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full bg-white/95 group-hover:bg-white group-hover:scale-110 transition-all flex items-center justify-center shadow-xl">
+            <Play size={22} className="text-zinc-900 fill-zinc-900 ml-1" />
+          </div>
+        </div>
+        {title && (
+          <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent">
+            <p className="text-white text-xs font-semibold truncate">{title}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800"
       style={{ aspectRatio: height ? undefined : aspectRatio, height }}>
-      {!loaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Loader2 size={22} className="animate-spin text-zinc-600" />
-        </div>
-      )}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Loader2 size={22} className="animate-spin text-zinc-600" />
+      </div>
       <iframe
         src={src}
         title={title || 'Content'}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
-        onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
-        className={cn(
-          'w-full h-full border-0 transition-opacity duration-300',
-          loaded ? 'opacity-100' : 'opacity-0'
-        )}
+        className="w-full h-full border-0 relative z-10"
       />
     </div>
   );
@@ -164,35 +213,38 @@ function DeliverableItem({ item, groupConfig, idx, totalInGroup }) {
   const url       = safeUrl(item.url);
   const label     = item.label || (totalInGroup > 1 ? `${groupConfig.label} ${idx + 1}` : groupConfig.label);
 
-  // ── Inline YouTube embed ──
+  // ── YouTube — thumbnail lazy embed ──
   if (provider === 'youtube' || (!provider && url && (url.includes('youtube.com') || url.includes('youtu.be')))) {
     const embedUrl = getYouTubeEmbedUrl(url);
+    const ytId     = embedUrl ? embedUrl.split('/embed/')[1]?.split('?')[0] : null;
+    const thumb    = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null;
     return (
       <div className="space-y-2">
         {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
-        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9" />
+        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9"
+          thumbnail={thumb} externalUrl={url} />
       </div>
     );
   }
 
-  // ── Inline Vimeo embed ──
+  // ── Vimeo — thumbnail lazy embed ──
   if (provider === 'vimeo' || (!provider && url?.includes('vimeo.com'))) {
     const embedUrl = getVimeoEmbedUrl(url);
     return (
       <div className="space-y-2">
         {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
-        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9" />
+        <EmbedFrame src={embedUrl} title={label} aspectRatio="16/9" externalUrl={url} />
       </div>
     );
   }
 
-  // ── Inline Spotify embed ──
+  // ── Spotify — auto-embed (Spotify works cross-domain) ──
   if (provider === 'spotify' || (!provider && url?.includes('spotify.com'))) {
     const embedUrl = getSpotifyEmbedUrl(url);
     return (
       <div className="space-y-2">
         {label && <p className="text-xs font-semibold text-zinc-400">{label}</p>}
-        <EmbedFrame src={embedUrl} title={label} height="152px" aspectRatio={undefined} />
+        <EmbedFrame src={embedUrl} title={label} height="152px" aspectRatio={undefined} externalUrl={url} />
       </div>
     );
   }
