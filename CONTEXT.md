@@ -707,7 +707,7 @@ created_at TIMESTAMPTZ
 ### Disponibilidade
 - Supabase free tier: 500 MB DB, 1 GB storage, 50k MAU
 - Não há servidores próprios — zero infraestrutura para manter
-- Deploy via Hostinger Horizons (Vite build → static hosting)
+- Deploy via Vercel (Vite build → static hosting), conectado ao `main` do GitHub — push dispara build+deploy automático. Domínio customizado `www.uffisolutions.com` conectado (ver sessão 02/07/2026). **Ambiente de desenvolvimento local não funcional no momento** — ver sessão 02/07/2026, todo o fluxo de deploy é commit → push → Vercel, sem preview local
 
 ### Escalabilidade
 - Architecture stateless no frontend — pode ser servido por qualquer CDN
@@ -1114,3 +1114,48 @@ Durante a validação em browser, uma categoria (`nichos-hobby`) foi alterada se
 ## Sessão 01/07/2026 (cont.) — Badge "Pending" removido do Admin Users (quebrado)
 
 O badge de confirmação de email ("Confirmed"/"Pending") ao lado de cada usuário sempre mostrava **"Pending" para todo mundo**, inclusive para `tejotao`. Causa: `AdminUsers.jsx` lia `u.email_confirmed_at` da tabela `profiles`, mas essa coluna **não existe** lá — confirmado via REST (`column profiles.email_confirmed_at does not exist`). Esse campo só existe em `auth.users` (Supabase Auth), inacessível pela chave pública usada no frontend. Removido o badge (`AdminUsers.jsx`) por não ser confiável; nenhuma outra funcionalidade dependia dele. Ver nota no Roadmap (`17. Glossário` / secção 16, item Assinaturas) sobre reaproveitar esse espaço de UI para status de assinatura/pagamento quando o produto de membro for desenhado.
+
+---
+
+## Sessão 02/07/2026 — Migração Cloud-First (Vercel) + Auditoria de Segurança RLS completa
+
+**Motivação:** ambiente de desenvolvimento local parou de responder (`npm run dev` — página em branco, requisição HTTP nunca completava). Decisão: pausar o debug local e migrar o workflow para Cloud-First via Vercel, com auditoria de segurança do banco antes do primeiro deploy público real.
+
+### Diagnóstico do travamento local (root cause identificada, não resolvido)
+- Causa raiz: o processo nativo do `esbuild` (usado pelo Vite para pre-bundling de dependências) trava indefinidamente, bloqueado num `read()` de sistema esperando dados de um pipe que o processo Node/Vite nunca entrega — confirmado com o profiler `sample` do macOS (thread principal presa em `read()`/`libsystem_kernel.dylib`).
+- Descartado como causa: processos `vite`/`build` órfãos concorrentes rodando havia 30+ minutos, cache `.vite` corrompido, versão do Node (testado Node 24.16 e Node 22 via `nvm`), binário `esbuild` corrompido (reinstalado do zero via `npm install esbuild @esbuild/darwin-arm64`), antivírus/EDR/firewall (nenhum encontrado no sistema), Gatekeeper (sem entradas suspeitas no log unificado do macOS).
+- **Confirmado que o travamento também ocorre no terminal real do usuário**, fora do ambiente de execução do assistente — não é artefato de sandbox, é um problema genuíno da máquina (macOS 26.5.1, build beta/recente).
+- **Sem solução aplicada.** Próximos passos sugeridos e não testados: reinstalar as Ferramentas de Linha de Comando do Xcode (`xcode-select --install`), ou seguir usando o Node 22 já instalado via `nvm use 22`.
+- Impacto prático: hoje não há como rodar/testar o app localmente. Todo o fluxo de desenvolvimento é commit → push → deploy automático na Vercel, sem preview local. Para testar antes de ir pro `main`, a alternativa é dar push num branch separado — a Vercel gera uma URL de Preview isolada da produção.
+
+### Auditoria de segurança RLS (Supabase) — antes do primeiro deploy público
+Descoberta inicial (via Table Editor do Supabase): várias tabelas de produção estavam com **RLS completamente desligada**, badge "Unrestricted" — exposição total via `anon key` pública embutida no bundle JS: `admin_roles`, `orders`, `favorites`, `notifications`, `user_courses`, `categories`, `category_translations`, `product_translations`, `products`, `purchases`.
+
+Trabalho realizado, tabela por tabela:
+1. **`profiles`** — removidas 2 policies de UPDATE duplicadas e uma policy de SELECT (`"Ver perfis autenticados"`) que deixava qualquer usuário logado ler todos os perfis (email, role, etc. de terceiros). INSERT estava sem nenhuma restrição (`with_check = true` pra role `public`, incluindo `anon` — qualquer um podia inserir uma linha de perfil com `role = 'super_admin'`). Corrigido com `profiles_insert_own` / `profiles_update_own` / `profiles_select_admin` + trigger `prevent_self_role_escalation` (bloqueia usuário comum de alterar a própria `role`/`status` via UPDATE — `WITH CHECK` sozinho não protege coluna individual, só a condição de dono da linha).
+2. **Tier 1 sensível** (`admin_roles`, `orders`, `favorites`, `notifications`, `user_courses`) — RLS ligada + policies: leitura restrita ao dono (`auth.uid() = user_id`) ou admin; **gravação bloqueada para usuário comum** em `orders`/`notifications`/`user_courses` (evita fraude: pedido "pago" sem pagar, notificação falsa injetada na conta de terceiro, curso liberado de graça).
+3. **`purchases`** — já tinha 3 policies desenhadas mas RLS nunca tinha sido ligada. Unificado o critério de "é admin": a policy antiga usava `profiles.is_admin` (coluna legada), substituída por `is_admin_or_super()` (mesmo critério usado no resto do banco) — confirmado sem divergência entre `is_admin` e `role` antes da troca.
+4. **Catálogo** (`categories`, `category_translations`, `product_translations`, `products`) — leitura pública só de linhas com `active = true`, escrita só admin. `product_translations` e `products` tinham policies antigas com `qual = true` (liberava tudo, inclusive rascunho não publicado) — a de `products` foi substituída; a de `product_translations` foi deixada de propósito por decisão do usuário (baixo risco, tabela só tem texto, sem dado sensível).
+5. **Revisão das 7 tabelas que já tinham RLS ligada** — achado crítico: `product_deliverables` (tabela real de entrega de conteúdo — colunas `url`, `provider`, `type`, `is_active`, `go_unlisted_at`, usada pela automação de YouTube/Drive/Vimeo) tinha uma policy `"Authenticated read deliverables"` com `auth.role() = 'authenticated'` — **qualquer usuário com conta lia o link de entrega de qualquer produto, sem ter comprado**. Corrigida para exigir `EXISTS` em `user_product_access` (única das 5 tabelas candidatas — `purchases`/`orders`/`user_courses`/`user_course_access`/`user_product_access` — com dado real em produção; as outras 4 têm 0 linhas, são schemas legados de iterações anteriores).
+
+**Pendências não-bloqueantes registradas, não corrigidas nesta sessão:**
+- `course_content` valida acesso contra `purchases` (0 linhas) em vez de `user_product_access` (fonte real) — provável bug funcional a testar quando `course_content` entrar em uso.
+- Coluna legada `profiles.is_admin` (booleana) ainda referenciada ao lado de `role` em policies de `course_content`/`user_course_access` — hoje sincronizados, mas vale consolidar num critério só.
+- `product_deliverables_select_purchased` (o trigger de auto-escalação de `profiles`) — teste via simulação de sessão (`SET LOCAL request.jwt.claims`) deu resultado ambíguo no SQL Editor; não foi refeito o teste real pelo navegador (usuário comum logado tentando `UPDATE profiles SET role='admin'`).
+- `user_product_access` tinha 2 policies de SELECT duplicadas (mesma condição) — inofensivo, não limpo.
+
+### Deploy Vercel
+- `src/lib/supabaseClient.js` — removida URL/anon key hardcoded no código-fonte, migrado para `import.meta.env.VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, com `throw` explícito se alguma faltar.
+- `vercel.json` criado (rewrites de SPA para o React Router funcionar em rotas profundas tipo `/dashboard`, `/products/:id`).
+- `package.json` — `engines.node: "20.x"` adicionado.
+- Env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) configuradas no painel da Vercel (Production/Preview/Development).
+- **Primeiro deploy falhou** com `Could not resolve "./plugins/..."`: a pasta `plugins/` (usada pelo `vite.config.js` para os plugins de dev — visual editor, edit mode, iframe route restoration, selection mode) nunca tinha sido commitada no git, junto com `src/pages/BlockedPage.jsx`, `src/components/uffi/ProfileModal.jsx` e `src/components/admin/UserProfileModal.jsx` — todos importados ativamente no app mas nunca versionados. O `main` no GitHub estava um dia inteiro desatualizado em relação ao disco (22 arquivos modificados + 20 novos nunca commitados). Corrigido com um commit único trazendo 42 arquivos (`68e095a`) — build passou, deploy confirmado funcionando via teste com navegador real (zero erros de console, home renderizando completa com hero, produtos, navegação, seletor de idioma).
+- **Domínio customizado conectado**: `www.uffisolutions.com` (+ apex `uffisolutions.com`) apontado via DNS na Vercel, certificado SSL emitido automaticamente — confirmado no ar pelo usuário.
+
+### Dados
+- 6 categorias criadas em produção via SQL direto no Supabase (pós-deploy).
+
+### Arquivamento de documentação
+Movidos para `docs/archive/` (documentos de auditoria de sessões anteriores, desatualizados frente ao estado real confirmado nesta sessão): `AUDIT_CHECKLIST.md`, `AUDIT_FINAL_REPORT.md`, `AUTHENTICATION_AUDIT.md`, `DATABASE_AUDIT_RESULTS.md`, `MAGIC_LINK_DIAGNOSIS.md`, `NAVIGATION_AUDIT_COMPLETE.md`, `NAVIGATION_AUDIT_RESULTS.md`, `RELATÓRIO_FINAL.md`, `SUPABASE_AUDIT_REPORT.md` (documentava a integração Supabase como "bloqueada/não autenticada" — obsoleto desde que a conexão real foi estabelecida), `SUPABASE_SETUP_CHECKLIST.md` (schema de 13 tabelas planejado que diverge bastante do schema real confirmado hoje), `SYSTEM_AUDIT_FINAL_REPORT.md`, `TECHNICAL_DOCUMENTATION.md`, `TRANSLATION_AUDIT_COMPLETE.md`, `TRANSLATION_AUDIT_RESULTS.md`.
+
+**Não movidos** (fora do escopo desta limpeza, decisão pendente do usuário): `EMAIL_TEMPLATES.html` (não é documento de auditoria, é referência ativa) e `"uffisolutions-v1.0-28jun2026 codigo Horizons"` (arquivo de 473KB sem extensão clara, não referenciado por nenhum import do código — recomendado o usuário verificar o conteúdo antes de decidir manter, arquivar ou remover).
