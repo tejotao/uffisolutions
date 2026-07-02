@@ -30,11 +30,18 @@ import '@/styles/globals.css';
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     const safetyTimer = setTimeout(() => setLoading(false), 3000);
 
     const subscription = onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      }
+      if (event === 'USER_UPDATED') {
+        setIsPasswordRecovery(false);
+      }
       try {
         if (session?.user) {
           const { data } = await getCurrentUserWithRole();
@@ -80,7 +87,9 @@ function App() {
         <meta name="description" content="Plataforma de treinamentos digitais e soluções." />
       </Helmet>
       <Router>
-        {isBlocked ? (
+        {isPasswordRecovery ? (
+          <ResetPasswordPage />
+        ) : isBlocked ? (
           <BlockedPage />
         ) : (
         <Routes>
