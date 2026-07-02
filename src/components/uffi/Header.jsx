@@ -5,7 +5,7 @@ import { Menu, X, LogOut, LayoutDashboard, Search, ShieldAlert, Package, Setting
 import { motion, AnimatePresence } from 'framer-motion';
 import { logout } from '@/lib/supabaseAuth';
 import { getUserRole, ROLES } from '@/lib/rolePermissions';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -45,7 +45,7 @@ const Header = ({
     user?.email?.split('@')[0] ||
     'User';
 
-  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : '?';
+  const userInitial = getInitials(user?.full_name, user?.email);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 20);

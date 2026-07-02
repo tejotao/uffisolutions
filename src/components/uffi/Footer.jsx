@@ -28,10 +28,10 @@ const Footer = () => {
               {t('messages.trade_name')}
             </p>
             <a 
-              href="mailto:us@uffisphere.com" 
+              href="mailto:us@uffisolutions.com"
               className="inline-block text-gray-400 hover:text-[#f59e0b] transition-colors text-xs mb-4"
             >
-              us@uffisphere.com
+              us@uffisolutions.com
             </a>
             <div className="text-xs text-gray-500 space-y-1">
               <p>Company Number: 16827147</p>

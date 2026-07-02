@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Package, AlertCircle, Search, Home, LogOut,
   User, Loader2, Copy, Download, ExternalLink, Play, CheckCircle, ChevronRight, Clock,
-  ShieldAlert, Lock,
+  ShieldAlert, Lock, UserCog,
 } from 'lucide-react';
 import AccessModal, { resolveDeliverables, groupDeliverablesByType, DELIVERY_CONFIG, getDeliveryConfig } from '@/components/uffi/AccessModal';
+import ProfileModal from '@/components/uffi/ProfileModal';
 import { getUserRole, ROLES } from '@/lib/rolePermissions';
 import Footer from '@/components/uffi/Footer';
 import Logo from '@/components/uffi/Logo';
@@ -18,7 +19,7 @@ import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, isAccessValid, daysUntilExpiry } from '@/lib/accessQueries';
 import { getDeliverablesForProducts } from '@/lib/deliverableQueries';
 import { supabase } from '@/lib/supabaseClient';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -288,6 +289,7 @@ const SectionTitle = ({ icon: Icon, label, count, iconColor }) => (
 
 export default function UserDashboard({ user }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
   const userRole = getUserRole(user);
@@ -298,8 +300,18 @@ export default function UserDashboard({ user }) {
   const [purchasedProducts, setPurchasedProducts] = useState([]);
   const [freeProducts, setFreeProducts] = useState([]);
   const [clientCode, setClientCode] = useState(null);
-  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [fullName, setFullName] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'settings') {
+      setShowProfileModal(true);
+      searchParams.delete('tab');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Access modal state
   const [accessProduct, setAccessProduct] = useState(null);
@@ -332,12 +344,9 @@ export default function UserDashboard({ user }) {
             userLang = profileData.preferred_language || profileData.language || 'pt';
             userProfileData = profileData;
             if (profileData.client_code) setClientCode(profileData.client_code);
-            if (profileData.profile_image_url || profileData.avatar_url) {
-              setAvatarUrl(profileData.profile_image_url || profileData.avatar_url);
-            }
+            if (profileData.full_name) setFullName(profileData.full_name);
             // Set display name from profile
             const name =
-              profileData.name ||
               profileData.full_name ||
               user?.user_metadata?.full_name?.split(' ')[0] ||
               user?.email?.split('@')[0] ||
@@ -468,6 +477,16 @@ export default function UserDashboard({ user }) {
         )}
       </AnimatePresence>
 
+      {/* ── Profile modal ── */}
+      <AnimatePresence>
+        {showProfileModal && (
+          <ProfileModal
+            user={user}
+            onClose={() => setShowProfileModal(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── First-login welcome modal ── */}
       <AnimatePresence>
         {showWelcomeModal && (
@@ -557,17 +576,22 @@ export default function UserDashboard({ user }) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
           <div className="flex items-center gap-4">
             {/* Avatar */}
-            <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-zinc-800 overflow-hidden flex items-center justify-center shrink-0">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <User size={20} className="text-amber-500/50" />
-              )}
+            <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-zinc-800 flex items-center justify-center shrink-0 text-base font-bold text-amber-400">
+              {getInitials(fullName, user?.email)}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">
-                Welcome back, <span className="text-amber-400">{displayName}</span>
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white tracking-tight">
+                  Welcome back, <span className="text-amber-400">{displayName}</span>
+                </h1>
+                <button
+                  onClick={() => setShowProfileModal(true)}
+                  title="Edit Profile"
+                  className="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors"
+                >
+                  <UserCog size={16} />
+                </button>
+              </div>
               <p className="text-xs text-zinc-500 mt-0.5">Manage your products and resources.</p>
             </div>
           </div>

@@ -49,8 +49,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="text-gray-400 text-sm font-medium mb-1 uppercase tracking-wider">E-mail de Suporte</h4>
-                    <a href="mailto:contact@uffisolutions.com" className="text-white font-bold text-lg hover:text-[#f59e0b] transition-colors block">
-                      contact@uffisolutions.com
+                    <a href="mailto:us@uffisolutions.com" className="text-white font-bold text-lg hover:text-[#f59e0b] transition-colors block">
+                      us@uffisolutions.com
                     </a>
                     <p className="text-gray-500 text-sm mt-1">Geralmente respondemos em até 24 horas.</p>
                   </div>

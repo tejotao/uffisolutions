@@ -459,6 +459,7 @@ Fallback: EN se chave não existe no idioma seleccionado
 - **Páginas públicas** (Home, Products, Login, Register, Footer, Header): totalmente traduzidas
 - **Admin panel**: hardcoded em inglês (intencionalmente — gestão é feita pelo admin da plataforma)
 - **User Dashboard**: hardcoded em inglês (interface de produto, não de marketing)
+- **Terms of Use / Privacy Policy** (`/termos`, `/privacidade`): hardcoded em **inglês (UK)**, intencionalmente fora do sistema de tradução — decisão de 01/07/2026, já que a razão social (UffiSphere HTJS Ltd) é registada no Reino Unido e os documentos legais seguem UK GDPR. O link no footer continua traduzido conforme o idioma do site; só o conteúdo da página de destino é fixo em inglês
 
 ### 12.4 Seleção de Idioma
 - Botões de flag no header público
@@ -484,7 +485,27 @@ language TEXT
 first_login BOOLEAN DEFAULT TRUE
 avatar_url TEXT
 profile_image_url TEXT
+status TEXT DEFAULT 'active'   -- 'active' | 'blocked' ✅ (novo)
+blocked_at TIMESTAMPTZ
+blocked_reason TEXT
+blocked_by UUID (FK → profiles)
+phone TEXT
+whatsapp TEXT
+contact_preference TEXT DEFAULT 'email'   -- 'email' | 'whatsapp' | 'phone' ✅ (novo)
+address_street TEXT
+address_number TEXT
+city TEXT                       -- ✅ (novo)
+postal_code TEXT
+country TEXT
+birth_date DATE
+classification TEXT             -- ✅ (novo) admin-only: VIP/Standard/Lead/Em risco/Inativo
+bio TEXT
+xp INT
+level TEXT                      -- gamification, não relacionado ao perfil
+last_login TIMESTAMPTZ
+user_id UUID                    -- legado, não usado pelo fluxo real (ver nota abaixo)
 ```
+> Nota: o schema documentado aqui reflete o estado real confirmado via API em 01/07/2026 — colunas como `name`, `first_login`, `profile_image_url`, `language` **não existem**, apesar de referenciadas por código legado (`ProfilePage.jsx`, `UserAvatar.jsx`, trecho antigo de `UserDashboard.jsx`). Ver sessão "Perfil do Usuário" abaixo.
 
 ### products
 ```sql
@@ -705,11 +726,6 @@ created_at TIMESTAMPTZ
 
 ### Q3 2026 — Alta Prioridade
 
-#### Password Reset Page (`/reset-password`)
-Actualmente o email de reset é enviado mas a página de destino não existe no app. O utilizador recebe o link mas não consegue redefinir a senha.
-- Página com campo de nova senha + confirmação
-- Usa `supabase.auth.updateUser()` com token da URL
-
 #### Funil de Compra Completo
 - Botão "Buy Now" no ProductDetail que abre o `stripe_link` configurado pelo admin
 - Webhook do Stripe para criar automaticamente registo em `purchases`
@@ -758,7 +774,7 @@ Depois reativar o campo no modal de produto.
 | **API Pública** | Para integrações com outras plataformas (Zapier, etc.) |
 | **App Mobile** | React Native ou PWA |
 | **Comunidade** | Fórum ou chat por produto |
-| **Assinaturas** | Modelo recorrente para acesso a biblioteca completa |
+| **Assinaturas** | Modelo recorrente para acesso a biblioteca completa. **Nota 01/07/2026:** avaliada a ideia de reaproveitar o slot visual do badge "Pending" (removido do Admin Users por estar quebrado — ver sessão abaixo) para exibir status de assinatura/pagamento (ex: "Pending payment" / "Active member" / "Expired") quando esse produto de membro/assinante for desenhado. Requer tabela de assinaturas + webhook recorrente do Stripe; o badge em si é só a última peça |
 
 ---
 
@@ -933,7 +949,6 @@ CREATE TABLE IF NOT EXISTS public.product_deliverables (
 
 | Item | Prioridade | Observação |
 |---|---|---|
-| **Password Reset Page** (`/reset-password`) | Alta | Email enviado mas página de destino não existe |
 | **Funil de compra Stripe** | Alta | `stripe_link` salvo mas botão de compra não implementado |
 | **Perfil do utilizador** | Média | Página `/profile` editável (nome, foto, idioma, password) |
 | **`admin_notes` no schema** | Baixa | `ALTER TABLE products ADD COLUMN admin_notes TEXT;` |
@@ -955,4 +970,147 @@ CREATE TABLE IF NOT EXISTS public.product_deliverables (
 ✅ Access system — purchases + user_product_access + expiração
 ✅ Drag-and-drop — Access Board funcional
 ✅ SQL executado — tabela product_deliverables criada + dados migrados
+✅ Password Reset — /reset-password testado ponta a ponta (email → link → nova senha → login) em 01/07/2026
+✅ User Block/Unblock — testado ponta a ponta (admin bloqueia → badge vermelha → login da conta bloqueada → tela "Account blocked" → unblock → acesso normal) em 01/07/2026
 ```
+
+---
+
+## Sessão 01/07/2026 — Soft-block de usuários (LGPD)
+
+**Motivação:** deletar o perfil de um usuário (botão antigo "Delete") apagava a linha de `profiles` mas mantinha a conta de auth ativa e não tinha certeza sobre cascade em `purchases`/`user_product_access`. Trocado o fluxo padrão para **bloqueio reversível**, preservando histórico de compras/acessos (rastreabilidade — LGPD Art. 6, VI). O hard-delete continua disponível, mas rotulado como via de erradicação legal (LGPD/GDPR), não como ação de moderação do dia a dia.
+
+### O que foi implementado
+- `profiles.status` (`active`/`blocked`) + `blocked_at`, `blocked_reason`, `blocked_by` — trilha de auditoria de quem bloqueou, quando e por quê
+- Trigger `prevent_self_privilege_escalation` no Postgres — impede que qualquer sessão (inclusive de um usuário já bloqueado) altere `status`/`role`/`is_admin`/`blocked_*` na própria linha, independente da política RLS configurada na tabela — defesa em profundidade contra auto-desbloqueio
+- `getCurrentUserWithRole()` agora traz `status` no objeto do usuário
+- `App.jsx` — gate central: `user.status === 'blocked'` (exceto super admin) renderiza `BlockedPage` em vez das rotas normais
+- `BlockedPage.jsx` (novo) — tela dark theme "Account blocked" com botão de contato por email e sign out
+- `AdminUsers.jsx` — badge vermelha "Blocked" na linha do usuário, botão Block/Unblock (ícone `Ban`), prompt opcional de motivo ao bloquear; super admin (`tejotao@gmail.com`) não pode ser bloqueado nem apagado pela UI
+- Permissão `block` adicionada a `admin` e `super_admin` em `rolePermissions.js`
+
+### ✅ Rodado no Supabase (01/07/2026)
+- `sql/2026-07-01_user_block_status.sql` — coluna `status` + trigger anti-escalada
+- `sql/2026-07-01_admin_update_profiles_rls.sql` — policy que faltava para admin conseguir dar UPDATE no perfil de outro usuário (sem ela, o botão Block dava 200 OK mas 0 linhas afetadas — bloqueio silenciosamente não acontecia)
+
+### Bugs encontrados e corrigidos durante a validação
+1. **RLS bloqueava o próprio recurso:** `profiles` só tinha policy de UPDATE para a própria linha (`auth.uid() = id`). Admin tentando bloquear outro usuário não dava erro, só não escrevia nada. Corrigido com policy adicional `is_admin_or_super()` (SECURITY DEFINER, evita recursão de RLS).
+2. **Tela preta ao logar com conta bloqueada:** `BlockedPage` estava sendo renderizada em `App.jsx` **fora** do `<Router>`, e o componente `Logo` chama `useNavigate()` incondicionalmente → crash `useNavigate() may be used only in the context of a <Router>`. Corrigido movendo o gate `isBlocked` para dentro do `<Router>`, como alternativa às `<Routes>` normais.
+
+### Limitações conhecidas (não resolvidas nesta sessão)
+- **Sem enforcement em tempo real:** se um usuário já estiver com sessão aberta no dashboard quando for bloqueado, ele só é ejetado no próximo login (não há subscription realtime na tabela `profiles`)
+- **Não é uma auditoria LGPD completa:** cobre accountability (quem/quando/por quê) e preserva o direito de eliminação (hard-delete continua existindo). Não cobre política de privacidade publicada, portabilidade de dados (export self-service) ou registro de consentimento — esses seguem como gaps separados, fora do escopo desta mudança
+- ~~Email de contato divergente~~ **Resolvido em 01/07/2026:** padronizado `us@uffisolutions.com` como único email de contato em toda a plataforma. `uffisphere.com` só é mencionado em contexto legal (Terms/Privacy, como razão social "UffiSphere HTJS Ltd") e como link de parceiro no footer. Emails corrigidos: `Footer.jsx` (era `us@uffisphere.com`), `Terms.jsx`/`Privacy.jsx` (era `support@uffisolutions.com`), `ContactPage.jsx` (era `contact@uffisolutions.com`), `CTA.jsx`/`Contact.jsx` (era `uffisolutions@gmail.com` — domínio totalmente diferente). Os 2 últimos são componentes órfãos (não importados em nenhuma página ativa), corrigidos por consistência mesmo assim
+
+### Sessão 01/07/2026 (cont.) — Rotas de Terms/Privacy conectadas
+Descoberto durante a correção acima: os links "Terms of Service" e "Privacy Policy" do footer (`/termos`, `/privacidade`) **nunca estiveram registados em `App.jsx`** — caíam no catch-all e redireccionavam para `/`. Existiam 5 arquivos candidatos em `src/pages/` (resíduo de iterações antigas do template): `Terms.jsx`/`Privacy.jsx` (completos, UK GDPR, mencionam UffiSphere HTJS Ltd) vs `TermsPage.jsx`/`TermsOfService.jsx`/`PrivacyPage.jsx` (genéricos, incompletos). Conectadas as rotas usando `Terms.jsx` e `Privacy.jsx`. Os 3 arquivos genéricos continuam no repo, não usados — candidatos a limpeza futura, não apagados sem confirmação.
+
+`Terms.jsx` e `Privacy.jsx` foram traduzidos de português para **inglês (UK)** a pedido do usuário — conteúdo legal fixo, fora do filtro de idioma do site.
+
+**Nota de processo:** durante a validação apareceu um dialog de confirmação inesperado ("Unblock reallandbr@gmail.com?") numa aba de browser que tinha ficado aberta durante um restart do dev server. Investigado: rejeitado sem aceitar, e conferido no banco que `reallandbr` continuava com `status: active` — nenhuma alteração real ocorreu. Causa mais provável: estado JS obsoleto na aba (não recarregada entre matar/reiniciar o servidor), não um bug de aplicação. Lição: sempre abrir aba nova (ou recarregar) após reiniciar o dev server, em vez de reaproveitar uma aba antiga.
+
+---
+
+## Sessão 01/07/2026 (cont.) — Perfil do Usuário (modal CRUD self-service + admin)
+
+**Motivação:** usuário pediu um modal de CRUD de perfil — sem foto (só iniciais), campos essenciais editáveis pelo próprio usuário (contato, endereço, data de nascimento), e um campo de classificação editável só pelo admin, junto com detalhes informativos (data de cadastro, etc.).
+
+### Descobertas antes de implementar (via API direta + leitura de código)
+- **A maioria dos campos já existia** em `profiles`: `phone`, `whatsapp`, `birth_date`, `address_street`, `address_number`, `postal_code`, `country`, `full_name`. Só faltavam `city`, `contact_preference` e `classification`.
+- **CONTEXT.md documentava colunas que não existem de verdade**: `name`, `first_login`, `profile_image_url`, `language` — confirmado via erro `column does not exist`. Corrigido na secção 13 (schema de `profiles`) acima.
+- **`src/pages/ProfilePage.jsx` e `src/components/auth/UserAvatar.jsx` são arquivos órfãos** de uma geração antiga do app (usam `AuthContext`/`useI18n`/coluna `user_id`, que não são o padrão real usado hoje). Não foram reaproveitados.
+- **Gancho morto reativado**: `Header.jsx` linha 159 — "Account Settings" já fazia `navigate('/dashboard?tab=settings')`, mas ninguém lia esse parâmetro. Agora `UserDashboard.jsx` lê e abre o modal automaticamente.
+- **Avatar era inconsistente em 4 lugares**, todos com 1ª letra do email (`Header.jsx`, `AdminLayout.jsx`, `AdminUsers.jsx`) ou tentando carregar uma foto real (`UserDashboard.jsx`). Padronizado pras 2 primeiras letras do **nome** (`getInitials()` em `src/lib/utils.js`), com fallback pro email se não houver nome.
+
+### O que foi implementado
+- `sql/2026-07-01_user_profile_fields.sql` — colunas `city`, `contact_preference`, `classification`; estendeu a trigger `prevent_self_privilege_escalation` (da feature de bloqueio) pra também proteger `classification` — usuário não pode setar a própria classificação nem via PATCH direto
+- `getCurrentUserWithRole()` (`supabaseAuth.js`) agora também busca `full_name`, necessário pros avatares globais (Header/AdminLayout)
+- `src/components/uffi/ProfileModal.jsx` (novo) — modal self-service: nome, telefone, whatsapp, preferência de contato, endereço completo, data de nascimento. Salva via `updateUser()` já existente (sem query nova)
+- `src/components/admin/UserProfileModal.jsx` (novo) — modal admin: dados pessoais **somente leitura** + classificação editável (dropdown: VIP/Standard/Lead/Em risco/Inativo) + metadados (cadastrado em, último login, client code)
+- `UserDashboard.jsx` — botão "Edit Profile" ao lado do nome + leitura de `?tab=settings`
+- `AdminUsers.jsx` — botão "View Profile" (ícone `Contact`) por linha
+
+### ✅ Testado e confirmado (01/07/2026)
+- Avatar com iniciais do nome correto em 4/4 pontos (Header, AdminLayout, AdminUsers, UserDashboard)
+- `ProfileModal`: carrega dados reais pré-preenchidos, salva e persiste corretamente (testado com endereço completo)
+- `/dashboard?tab=settings` abre o modal automaticamente e limpa o parâmetro da URL depois
+- `UserProfileModal`: exibe todos os dados formatados corretamente (datas, endereço concatenado)
+- **Segurança validada:** tentativa de setar a própria `classification` via PATCH direto retorna erro 400 (`Not allowed to modify protected fields on your own profile`) — bloqueado mesmo para super admin tentando alterar a si mesmo; UI trata o erro graciosamente (toast, modal não fecha, sem crash)
+- Build e lint limpos (2393 módulos)
+
+### Nota — dados de teste limpos pelo usuário
+Durante a sessão, o usuário removeu manualmente as contas de teste (`reallandbr`, `joselito.tesseroli`, `uffiservice`) e produtos de teste direto no Supabase — não relacionado a nenhuma mudança de código desta sessão. Restou só `tejotao` (super admin) pra testar; o caminho "admin classifica outro usuário" não foi testado ao vivo por falta de uma segunda conta, mas reaproveita exatamente o mesmo `updateUser()` + policy `is_admin_or_super()` já validado na feature de bloqueio.
+
+---
+
+## Sessão 01/07/2026 (cont.) — Auditoria de responsividade (mobile/tablet/desktop)
+
+**Motivação:** usuário reportou o modal "My Profile" cortando o cabeçalho, e pediu revisão de responsividade em todo o sistema. Escopo definido com o usuário: todas as telas por prioridade (público → dashboard → admin), corrigindo problemas reais conforme encontrados.
+
+### Bug raiz encontrado (afetava 6 modais no app inteiro)
+O cabeçalho do "My Profile" não estava sendo cortado por scroll — era **z-index empatado** com as barras de navegação fixas. Todo modal usava `z-50`, exatamente igual às barras fixas (`UserDashboard.jsx` top bar, `AdminLayout.jsx` header, `Header.jsx` público), todas também `z-50`. Como as barras vêm depois no DOM, elas pintavam por cima do topo do modal.
+
+**Tentativa intermediária que não resolveu sozinha:** adicionar `overflow-y-auto` ao wrapper do modal com `items-center` — é um bug conhecido do CSS flexbox (centralizar + overflow não revela conteúdo que ultrapassa por cima em vários browsers).
+
+**Correção final aplicada em 6 arquivos** (`ProfileModal.jsx`, `UserProfileModal.jsx`, `AdminUsers.jsx` GrantModal, `AdminCategories.jsx`, `RegisterPage.jsx`, `LoginPage.jsx` ×2):
+- `z-50` → `z-[60]` (acima das barras fixas `z-50`, abaixo dos toasts `z-[100]`)
+- `items-center` → `items-start` (elimina o bug de clipping por cima, ao custo de não ficar 100% centralizado quando o conteúdo é curto)
+- Adicionado `overflow-y-auto` no wrapper externo
+- `AccessModal.jsx` já estava correto (`z-[200]`, `items-end sm:items-center`) — não precisou de ajuste, serviu de referência pro padrão certo
+
+### Bug real encontrado — Access Board (Kanban) ilegível no mobile
+As colunas "Products" e "Users" ficavam lado a lado mesmo em telas de 390px, cortando texto (`"T..."`, `"te..."`) e tornando a tela inutilizável no celular. Corrigido em `AccessBoard.jsx`:
+- Container flex: `flex` → `flex flex-col lg:flex-row` (empilha abaixo de 1024px)
+- Coluna Products: `w-72` fixo → `w-full lg:w-72` + `max-h-[40vh] lg:max-h-none` + borda muda de direita pra baixo no mobile
+- Coluna Users: adicionado `min-h-0` (necessário pro scroll interno funcionar corretamente dentro de flex-col)
+- Testado em 390px, 768px e 1024px — empilha no mobile/tablet, lado a lado a partir de `lg` (1024px), sem regressão
+
+### Testado e aprovado sem alterações necessárias
+- Home, Login, Register, Products (site público) — mobile/tablet/desktop
+- User Dashboard — mobile (incluindo modal de perfil corrigido)
+- Admin Dashboard, Admin Categories, Admin Users — mobile (sidebar vira drawer hamburger, cards empilham em 1 coluna)
+- `AdminProducts.jsx` — já tinha `overflow-x-auto` + colunas `hidden md:table-cell`/`hidden sm:table-cell` para a tabela; nenhuma mudança necessária
+
+### Gaps conhecidos (não testados)
+- Catálogo estava vazio durante a sessão (usuário limpou produtos de teste) — não foi possível validar o grid de cards de produtos nem a página `ProductDetail` (`/products/:id`) com dados reais
+- Build e lint limpos (2393 módulos)
+
+---
+
+## Sessão 01/07/2026 (cont.) — Modal de Categorias: nomes por idioma + color picker
+
+**Descoberta crítica antes de implementar:** a tabela `categories` não tinha colunas `name` nem `description` — confirmado via REST (`column categories.name does not exist`). O modal de criar/editar categoria já estava **quebrado** (salvar sempre falhava) antes desta sessão, independente do pedido de i18n. Colunas reais existentes: `id, slug, icon, color, sort_order, active, created_at`. O nome exibido nos cards/catálogo vem de uma tabela separada `category_translations` (join por idioma), não documentada até agora no CONTEXT.md — **não foi alterada** nesta sessão.
+
+### SQL rodado no Supabase
+`sql/2026-07-01_category_names_i18n.sql`:
+```sql
+ALTER TABLE categories
+  ADD COLUMN IF NOT EXISTS name TEXT,
+  ADD COLUMN IF NOT EXISTS name_pt TEXT,
+  ADD COLUMN IF NOT EXISTS name_it TEXT,
+  ADD COLUMN IF NOT EXISTS name_es TEXT,
+  ADD COLUMN IF NOT EXISTS description TEXT;
+```
+
+### O que foi implementado
+- `AdminCategories.jsx`: Nome (EN) obrigatório com slug 100% automático (gerado a cada tecla, sem botão manual); Nome (PT-BR)/Nome (IT)/Nome (ES) opcionais; color picker nativo (`input type="color"`) + campo hex editável + preview, substituindo as bolinhas de cor fixas; ícone (emoji grid) e slug/descrição/ativo mantidos como estavam
+- `catalogQueries.js` → `fetchAllCategories`: passou a também selecionar `name, name_pt, name_it, name_es, description` e retorna como `name_en/name_pt/name_it/name_es/description_raw`, usados só para pré-preencher o modal ao editar — os campos `name`/`description` já existentes (derivados de `category_translations`) continuam iguais para todo o resto do app
+
+### Escopo — o que essas colunas NÃO fazem (ainda)
+Os nomes por idioma salvos aqui **não aparecem** em nenhum outro lugar do site (cards de produto, filtros, catálogo público) — tudo isso continua lendo de `category_translations`. Isso foi mantido intencionalmente por instrução explícita do usuário ("não altere nenhum outro componente/tabela"). Se no futuro quiser que esses nomes apareçam de fato no site, é preciso migrar as leituras de `category_translations` para essas colunas novas (ou popular `category_translations` a partir delas).
+
+### ⚠️ Incidente de teste — mutação real não intencional (corrigida)
+Durante a validação em browser, uma categoria (`nichos-hobby`) foi alterada sem clique deliberado — slug virou `hobby`, cor mudou de `#34a853` para `#d37b55`, `name`/`description` foram preenchidos. Hipótese: cliques/teclas de uma sessão de teste anterior (Users) ficaram enfileirados e foram entregues com atraso após a navegação para Categories, coincidindo com posições de elementos (botão Editar → color picker → possivelmente Salvar). **Revertido manualmente** via API (slug, cor, ícone restaurados; name/description voltaram a `null`) e confirmado que as outras 4 categorias não foram afetadas. Não é um bug do código do app. Lição: após qualquer troca de página/reload do servidor, aguardar (`wait_for`) e tirar um snapshot limpo antes de interagir — não confiar em cliques imediatos após navegação.
+
+### ✅ Testado e confirmado
+- Criar categoria com nome EN + PT + IT + ES + cor via hex — salvou corretamente
+- Slug gerado automaticamente a cada tecla no campo Nome (EN)
+- Editar reabre modal com todos os campos pré-preenchidos corretamente (incluindo cor)
+- Excluir categoria de teste — removida sem deixar resíduo
+- Build e lint limpos (2391 módulos)
+
+---
+
+## Sessão 01/07/2026 (cont.) — Badge "Pending" removido do Admin Users (quebrado)
+
+O badge de confirmação de email ("Confirmed"/"Pending") ao lado de cada usuário sempre mostrava **"Pending" para todo mundo**, inclusive para `tejotao`. Causa: `AdminUsers.jsx` lia `u.email_confirmed_at` da tabela `profiles`, mas essa coluna **não existe** lá — confirmado via REST (`column profiles.email_confirmed_at does not exist`). Esse campo só existe em `auth.users` (Supabase Auth), inacessível pela chave pública usada no frontend. Removido o badge (`AdminUsers.jsx`) por não ser confiável; nenhuma outra funcionalidade dependia dele. Ver nota no Roadmap (`17. Glossário` / secção 16, item Assinaturas) sobre reaproveitar esse espaço de UI para status de assinatura/pagamento quando o produto de membro for desenhado.

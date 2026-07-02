@@ -658,10 +658,10 @@ export default function AccessBoard({ user: adminUser }) {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex flex-grow overflow-hidden">
+            <div className="flex flex-col lg:flex-row flex-grow overflow-hidden">
 
               {/* ══ LEFT: Products ══ */}
-              <div className="w-72 shrink-0 flex flex-col border-r border-zinc-800 bg-zinc-950/40">
+              <div className="w-full lg:w-72 shrink-0 flex flex-col max-h-[40vh] lg:max-h-none border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-950/40">
 
                 {/* Product column header */}
                 <div className="px-4 pt-4 pb-3 space-y-2.5 shrink-0">
@@ -748,7 +748,7 @@ export default function AccessBoard({ user: adminUser }) {
               </div>
 
               {/* ══ RIGHT: Users ══ */}
-              <div className="flex-grow flex flex-col overflow-hidden">
+              <div className="flex-grow min-h-0 flex flex-col overflow-hidden">
 
                 {/* User area header */}
                 <div className="px-5 pt-4 pb-3 shrink-0 flex items-center gap-3">

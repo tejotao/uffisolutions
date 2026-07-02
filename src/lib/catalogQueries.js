@@ -161,7 +161,7 @@ export const fetchAllCategories = async (language = 'pt') => {
   try {
     const { data, error } = await supabase
       .from('categories')
-      .select('id, slug, color, icon, sort_order, active, category_translations(language, name, description)')
+      .select('id, slug, color, icon, sort_order, active, name, name_pt, name_it, name_es, description, category_translations(language, name, description)')
       .order('sort_order', { ascending: true });
 
     if (error) throw error;
@@ -177,7 +177,13 @@ export const fetchAllCategories = async (language = 'pt') => {
         name: derivedName,
         description: trans.description || '',
         active: cat.active,
-        is_active: cat.active
+        is_active: cat.active,
+        // Flat per-language name/description columns, used by the admin CRUD modal only
+        name_en: cat.name || '',
+        name_pt: cat.name_pt || '',
+        name_it: cat.name_it || '',
+        name_es: cat.name_es || '',
+        description_raw: cat.description || ''
       };
     });
   } catch (error) {

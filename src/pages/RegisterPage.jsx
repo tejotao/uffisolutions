@@ -242,7 +242,7 @@ export default function RegisterPage() {
 
       <AnimatePresence>
         {showEmailConfirmationModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 bg-black/80 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

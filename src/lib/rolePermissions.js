@@ -11,7 +11,7 @@ export const PERMISSIONS = {
   [ROLES.SUPER_ADMIN]: {
     products: ['create', 'read', 'update', 'delete', 'feature'],
     categories: ['create', 'read', 'update', 'delete'],
-    users: ['create', 'read', 'update', 'delete', 'changeRole', 'resetPassword'],
+    users: ['create', 'read', 'update', 'delete', 'block', 'changeRole', 'resetPassword'],
     analytics: ['read'],
     settings: ['read', 'update'],
     system: ['read', 'update']
@@ -19,7 +19,7 @@ export const PERMISSIONS = {
   [ROLES.ADMIN]: {
     products: ['create', 'read', 'update', 'delete', 'feature'],
     categories: ['create', 'read', 'update', 'delete'],
-    users: ['read', 'update', 'resetPassword'],
+    users: ['read', 'update', 'block', 'resetPassword'],
     analytics: ['read'],
     settings: ['read'],
     system: []

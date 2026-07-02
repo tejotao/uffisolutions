@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Users, ChevronDown, Check,
-  Shield, Filter, AlertTriangle, Key, CheckCircle, Clock,
+  Shield, Filter, AlertTriangle, Key, CheckCircle,
   ShieldCheck, CalendarDays, Trash, RefreshCw, Package,
-  Edit2, Trash2, X,
+  Edit2, Trash2, X, Ban, Contact,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import UserProfileModal from '@/components/admin/UserProfileModal';
 import { fetchAllProductsAllLanguages, fetchAllUsers, updateUser, deleteUser } from '@/lib/catalogQueries';
 import {
   getAllAccessSummary,
@@ -20,9 +21,9 @@ import {
   daysUntilExpiry,
 } from '@/lib/accessQueries';
 import { useToast } from '@/hooks/use-toast';
-import { canAccess, ROLES } from '@/lib/rolePermissions';
+import { canAccess, isSuperAdmin, ROLES } from '@/lib/rolePermissions';
 import { resetPassword } from '@/lib/supabaseAuth';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ const GrantModal = ({ targetUser, allProducts, grantedBy, existingIds, onClose, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 bg-black/85 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -405,11 +406,13 @@ export default function AdminUsers({ user }) {
   const [roleFilter, setRoleFilter]   = useState('all');
   const [expandedId, setExpandedId]   = useState(null);
   const [grantTarget, setGrantTarget] = useState(null);
+  const [profileTarget, setProfileTarget] = useState(null);
 
   const permissions = {
     canRead:          canAccess(user, 'users', 'read'),
     canUpdate:        canAccess(user, 'users', 'update'),
     canDelete:        canAccess(user, 'users', 'delete'),
+    canBlock:         canAccess(user, 'users', 'block'),
     canResetPassword: canAccess(user, 'users', 'resetPassword'),
     canGrantProducts: canAccess(user, 'users', 'update'),
   };
@@ -430,7 +433,7 @@ export default function AdminUsers({ user }) {
         email: u.email || '',
         role: u.role || (u.is_admin ? ROLES.ADMIN : ROLES.USER),
         clientCode: u.client_code || null,
-        emailConfirmed: !!u.email_confirmed_at,
+        status: u.status || 'active',
       })));
     } catch {
       toast({ title: 'Failed to load users', variant: 'destructive' });
@@ -469,14 +472,53 @@ export default function AdminUsers({ user }) {
   const deleteU = async (id, e) => {
     e.stopPropagation();
     if (!permissions.canDelete) return;
-    if (!window.confirm('Delete this user from the panel? This removes the profile row only.')) return;
+    if (!window.confirm('Permanently erase this profile? Use only for legal data-erasure requests (LGPD/GDPR) — this removes the profile row and cannot be undone. For blocking access, use "Block" instead.')) return;
     try {
       const { error } = await deleteUser(id);
       if (error) throw error;
-      toast({ title: 'User removed from panel' });
+      toast({ title: 'User data erased' });
       setUsers((prev) => prev.filter((u) => u.id !== id));
     } catch {
       toast({ title: 'Error deleting user', variant: 'destructive' });
+    }
+  };
+
+  const toggleBlock = async (u, e) => {
+    e.stopPropagation();
+    if (!permissions.canBlock) return;
+    const blocking = u.status !== 'blocked';
+
+    if (blocking) {
+      const reason = window.prompt(`Block ${u.email}? Optional reason (visible only in this admin panel):`, '');
+      if (reason === null) return;
+      try {
+        const { error } = await updateUser(u.id, {
+          status: 'blocked',
+          blocked_at: new Date().toISOString(),
+          blocked_reason: reason || null,
+          blocked_by: user?.id || null,
+        });
+        if (error) throw error;
+        toast({ title: `${u.email} blocked`, className: 'border-red-500 bg-zinc-900 text-white' });
+        setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, status: 'blocked' } : x)));
+      } catch {
+        toast({ title: 'Error blocking user', variant: 'destructive' });
+      }
+    } else {
+      if (!window.confirm(`Unblock ${u.email}? They will regain full access immediately.`)) return;
+      try {
+        const { error } = await updateUser(u.id, {
+          status: 'active',
+          blocked_at: null,
+          blocked_reason: null,
+          blocked_by: null,
+        });
+        if (error) throw error;
+        toast({ title: `${u.email} unblocked`, className: 'border-emerald-500 bg-zinc-900 text-white' });
+        setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, status: 'active' } : x)));
+      } catch {
+        toast({ title: 'Error unblocking user', variant: 'destructive' });
+      }
     }
   };
 
@@ -561,7 +603,7 @@ export default function AdminUsers({ user }) {
                   >
                     {/* Avatar */}
                     <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-sm font-bold text-amber-400 shrink-0">
-                      {(u.email || '?').charAt(0).toUpperCase()}
+                      {getInitials(u.name !== '-' ? u.name : null, u.email)}
                     </div>
 
                     {/* Name + email */}
@@ -571,19 +613,16 @@ export default function AdminUsers({ user }) {
                           {u.name !== '-' ? u.name : u.email.split('@')[0]}
                         </span>
                         {roleBadge(u.role)}
+                        {u.status === 'blocked' && (
+                          <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded border bg-red-500/15 text-red-400 border-red-500/25">
+                            <Ban size={9} /> Blocked
+                          </span>
+                        )}
                         {u.clientCode && (
                           <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono">{u.clientCode}</span>
                         )}
                       </div>
                       <p className="text-xs text-zinc-500 truncate">{u.email}</p>
-                    </div>
-
-                    {/* Email confirmed */}
-                    <div className="hidden sm:flex shrink-0">
-                      {u.emailConfirmed
-                        ? <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-full"><CheckCircle size={10} /> Confirmed</span>
-                        : <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-full"><Clock size={10} /> Pending</span>
-                      }
                     </div>
 
                     {/* Product count */}
@@ -603,14 +642,30 @@ export default function AdminUsers({ user }) {
                           <ShieldCheck size={12} /> Grant
                         </button>
                       )}
+                      {permissions.canUpdate && (
+                        <button onClick={(e) => { e.stopPropagation(); setProfileTarget(u); }} title="View Profile"
+                          className="p-2 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors">
+                          <Contact size={14} />
+                        </button>
+                      )}
                       {permissions.canResetPassword && (
                         <button onClick={(e) => resetPwd(u.email, e)} title="Reset Password"
                           className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors">
                           <Key size={14} />
                         </button>
                       )}
-                      {permissions.canDelete && (
-                        <button onClick={(e) => deleteU(u.id, e)} title="Remove from panel"
+                      {permissions.canBlock && !isSuperAdmin(u.email) && (
+                        <button onClick={(e) => toggleBlock(u, e)}
+                          title={u.status === 'blocked' ? 'Unblock user' : 'Block user'}
+                          className={cn('p-2 rounded-lg transition-colors',
+                            u.status === 'blocked'
+                              ? 'text-red-400 bg-red-500/10 hover:bg-red-500/20'
+                              : 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10')}>
+                          <Ban size={14} />
+                        </button>
+                      )}
+                      {permissions.canDelete && !isSuperAdmin(u.email) && (
+                        <button onClick={(e) => deleteU(u.id, e)} title="Erase user data (LGPD/GDPR)"
                           className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
                           <Trash2 size={14} />
                         </button>
@@ -650,6 +705,18 @@ export default function AdminUsers({ user }) {
             existingIds={new Set(summary.get(grantTarget.id)?.productIds || [])}
             onClose={() => setGrantTarget(null)}
             onSuccess={load}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Profile Modal ── */}
+      <AnimatePresence>
+        {profileTarget && (
+          <UserProfileModal
+            key={profileTarget.id}
+            targetUser={profileTarget}
+            onClose={() => setProfileTarget(null)}
+            onSaved={load}
           />
         )}
       </AnimatePresence>

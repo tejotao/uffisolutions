@@ -1,6 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://qrnqwewmomlxhaiujrnd.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_DZIAZcX4GJjVl-uvn_pgWQ_NDWfhu8Q';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    'Missing Supabase env vars: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. ' +
+    'Set them in .env.local (dev) or in the Vercel project settings (deploy).'
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

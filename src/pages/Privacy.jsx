@@ -16,7 +16,7 @@ const DataTable = ({ rows }) => (
     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
       <thead>
         <tr style={{ borderBottom: '2px solid #f59e0b' }}>
-          {['Dados Recolhidos','Finalidade','Base Legal','Retenção'].map(h => (
+          {['Data Collected','Purpose','Legal Basis','Retention'].map(h => (
             <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: ACCENT, fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
           ))}
         </tr>
@@ -42,63 +42,63 @@ export default function Privacy() {
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color: '#000' }}>U</div>
           <span style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>Uffi<span style={{ color: ACCENT }}>Solutions</span></span>
         </a>
-        <a href="/" style={{ color: MUTED, fontSize: 13, textDecoration: 'none' }}>← Voltar ao início</a>
+        <a href="/" style={{ color: MUTED, fontSize: 13, textDecoration: 'none' }}>← Back to Home</a>
       </nav>
 
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '60px 32px 80px' }}>
         <div style={{ marginBottom: 48 }}>
           <span style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: ACCENT, padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>Legal</span>
-          <h1 style={{ fontSize: 38, fontWeight: 900, margin: '20px 0 10px', letterSpacing: -0.5 }}>Política de Privacidade</h1>
-          <p style={{ color: MUTED, fontSize: 14 }}>Última actualização: 20 de junho de 2026</p>
+          <h1 style={{ fontSize: 38, fontWeight: 900, margin: '20px 0 10px', letterSpacing: -0.5 }}>Privacy Policy</h1>
+          <p style={{ color: MUTED, fontSize: 14 }}>Last updated: 20 June 2026</p>
         </div>
 
-        <Section title="1. Responsável pelo Tratamento de Dados">
-          <p><strong style={{ color: '#fff' }}>UffiSphere HTJS Ltd</strong> (doravante "UffiSolutions"), empresa registada no Reino Unido, é a responsável pelo tratamento dos seus dados pessoais.</p>
-          <p>Contacto para assuntos de privacidade: <a href="mailto:support@uffisolutions.com" style={{ color: ACCENT }}>support@uffisolutions.com</a></p>
-          <p>Esta política é aplicável ao website <strong style={{ color: '#fff' }}>uffisolutions.com</strong> e a todos os produtos digitais oferecidos na plataforma, em conformidade com o <strong style={{ color: '#fff' }}>UK GDPR</strong> (UK General Data Protection Regulation) e o <strong style={{ color: '#fff' }}>Data Protection Act 2018</strong>.</p>
+        <Section title="1. Data Controller">
+          <p><strong style={{ color: '#fff' }}>UffiSphere HTJS Ltd</strong> (hereinafter "UffiSolutions"), a company registered in the United Kingdom, is the controller responsible for processing your personal data.</p>
+          <p>Contact for privacy matters: <a href="mailto:us@uffisolutions.com" style={{ color: ACCENT }}>us@uffisolutions.com</a></p>
+          <p>This policy applies to the website <strong style={{ color: '#fff' }}>uffisolutions.com</strong> and all digital products offered on the platform, in accordance with the <strong style={{ color: '#fff' }}>UK GDPR</strong> (UK General Data Protection Regulation) and the <strong style={{ color: '#fff' }}>Data Protection Act 2018</strong>.</p>
         </Section>
 
-        <Section title="2. Dados que Recolhemos e Como os Utilizamos">
+        <Section title="2. Data We Collect and How We Use It">
           <DataTable rows={[
-            ['Nome e email','Criação de conta e comunicação','Execução de contrato / Interesse legítimo','Até eliminação de conta'],
-            ['Dados de pagamento (Stripe)','Processamento de compras','Execução de contrato','Conforme lei fiscal (7 anos)'],
-            ['Endereço IP e cookies técnicos','Segurança e funcionamento do site','Interesse legítimo','Sessão / 12 meses'],
-            ['Cookies de análise','Melhorar a experiência do utilizador','Consentimento','13 meses'],
-            ['Histórico de compras','Acesso a produtos adquiridos','Execução de contrato','Vida da conta + 7 anos'],
+            ['Name and email','Account creation and communication','Performance of contract / Legitimate interest','Until account deletion'],
+            ['Payment data (Stripe)','Purchase processing','Performance of contract','As required by tax law (7 years)'],
+            ['IP address and technical cookies','Site security and functionality','Legitimate interest','Session / 12 months'],
+            ['Analytics cookies','Improving user experience','Consent','13 months'],
+            ['Purchase history','Access to purchased products','Performance of contract','Life of account + 7 years'],
           ]} />
         </Section>
 
-        <Section title="3. Base Legal para o Tratamento">
-          <p>Tratamos os seus dados com base nas seguintes bases legais previstas no UK GDPR:</p>
+        <Section title="3. Legal Basis for Processing">
+          <p>We process your data based on the following legal bases under the UK GDPR:</p>
           <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Execução de contrato (Art. 6(1)(b)):</strong> Para fornecer os produtos e serviços adquiridos</li>
-            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Obrigação legal (Art. 6(1)(c)):</strong> Para cumprir obrigações fiscais e legais no Reino Unido</li>
-            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Interesse legítimo (Art. 6(1)(f)):</strong> Para segurança da plataforma e prevenção de fraudes</li>
-            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Consentimento (Art. 6(1)(a)):</strong> Para cookies não essenciais e comunicações de marketing</li>
+            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Performance of a contract (Art. 6(1)(b)):</strong> To provide the products and services purchased</li>
+            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Legal obligation (Art. 6(1)(c)):</strong> To comply with UK tax and legal obligations</li>
+            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Legitimate interest (Art. 6(1)(f)):</strong> For platform security and fraud prevention</li>
+            <li style={{ marginBottom: 8 }}><strong style={{ color: '#fff' }}>Consent (Art. 6(1)(a)):</strong> For non-essential cookies and marketing communications</li>
           </ul>
         </Section>
 
-        <Section title="4. Partilha de Dados com Terceiros">
-          <p>Os seus dados apenas são partilhados com:</p>
+        <Section title="4. Sharing Data with Third Parties">
+          <p>Your data is only shared with:</p>
           <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Stripe:</strong> Processamento seguro de pagamentos (dados de cartão nunca armazenados por nós)</li>
-            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Supabase:</strong> Alojamento seguro da base de dados (servidores na UE/UK)</li>
-            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Google Drive:</strong> Entrega de conteúdo digital após compra</li>
-            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Hostinger:</strong> Alojamento do website</li>
+            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Stripe:</strong> Secure payment processing (card data is never stored by us)</li>
+            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Supabase:</strong> Secure database hosting (servers in the EU/UK)</li>
+            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Google Drive:</strong> Delivery of digital content after purchase</li>
+            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Hostinger:</strong> Website hosting</li>
           </ul>
-          <p>Nunca vendemos, alugamos ou partilhamos os seus dados pessoais com terceiros para fins comerciais.</p>
+          <p>We never sell, rent or share your personal data with third parties for commercial purposes.</p>
         </Section>
 
-        <Section title="5. Os Seus Direitos ao Abrigo do UK GDPR">
-          <p>Tem os seguintes direitos relativamente aos seus dados pessoais:</p>
+        <Section title="5. Your Rights under the UK GDPR">
+          <p>You have the following rights regarding your personal data:</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 12, marginTop: 12 }}>
             {[
-              ['🔍 Acesso','Saber quais dados temos sobre si'],
-              ['✏️ Rectificação','Corrigir dados incorrectos'],
-              ['🗑️ Apagamento','Solicitar a eliminação dos seus dados ("direito ao esquecimento")'],
-              ['⛔ Oposição','Opor-se ao tratamento para marketing'],
-              ['📦 Portabilidade','Receber os seus dados em formato legível por máquina'],
-              ['⏸️ Limitação','Restringir o tratamento em certas circunstâncias'],
+              ['🔍 Access','Find out what data we hold about you'],
+              ['✏️ Rectification','Correct inaccurate data'],
+              ['🗑️ Erasure','Request deletion of your data ("right to be forgotten")'],
+              ['⛔ Objection','Object to processing for marketing purposes'],
+              ['📦 Portability','Receive your data in a machine-readable format'],
+              ['⏸️ Restriction','Restrict processing in certain circumstances'],
             ].map(([t, d]) => (
               <div key={t} style={{ background: '#141414', border: '1px solid #222', borderRadius: 10, padding: '14px 16px' }}>
                 <div style={{ fontWeight: 700, color: '#fff', marginBottom: 4, fontSize: 13 }}>{t}</div>
@@ -106,40 +106,40 @@ export default function Privacy() {
               </div>
             ))}
           </div>
-          <p style={{ marginTop: 16 }}>Para exercer qualquer um destes direitos, contacte-nos em <a href="mailto:support@uffisolutions.com" style={{ color: ACCENT }}>support@uffisolutions.com</a>. Responderemos no prazo de <strong style={{ color: '#fff' }}>30 dias</strong>.</p>
-          <p>Tem também o direito de apresentar queixa junto do <strong style={{ color: '#fff' }}>Information Commissioner's Office (ICO)</strong> no Reino Unido: <a href="https://ico.org.uk" target="_blank" rel="noreferrer" style={{ color: ACCENT }}>ico.org.uk</a></p>
+          <p style={{ marginTop: 16 }}>To exercise any of these rights, contact us at <a href="mailto:us@uffisolutions.com" style={{ color: ACCENT }}>us@uffisolutions.com</a>. We will respond within <strong style={{ color: '#fff' }}>30 days</strong>.</p>
+          <p>You also have the right to lodge a complaint with the <strong style={{ color: '#fff' }}>Information Commissioner's Office (ICO)</strong> in the UK: <a href="https://ico.org.uk" target="_blank" rel="noreferrer" style={{ color: ACCENT }}>ico.org.uk</a></p>
         </Section>
 
         <Section title="6. Cookies">
-          <p>Utilizamos os seguintes tipos de cookies:</p>
+          <p>We use the following types of cookies:</p>
           <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Essenciais:</strong> Necessários para o funcionamento básico do site. Não requerem consentimento.</li>
-            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Analíticos:</strong> Para compreender como os utilizadores interagem com o site (ex: tempo de sessão). Requerem consentimento.</li>
-            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Preferências:</strong> Para guardar as suas escolhas de idioma e configurações. Requerem consentimento.</li>
+            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Essential:</strong> Necessary for the basic functioning of the site. No consent required.</li>
+            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Analytics:</strong> To understand how users interact with the site (e.g. session duration). Consent required.</li>
+            <li style={{ marginBottom: 6 }}><strong style={{ color: '#fff' }}>Preferences:</strong> To remember your language and settings choices. Consent required.</li>
           </ul>
-          <p>Pode gerir as suas preferências de cookies em qualquer momento através das definições do seu browser ou contactando-nos.</p>
+          <p>You can manage your cookie preferences at any time through your browser settings or by contacting us.</p>
         </Section>
 
-        <Section title="7. Segurança dos Dados">
-          <p>Implementamos medidas técnicas e organizacionais adequadas para proteger os seus dados pessoais contra acesso não autorizado, perda ou destruição, incluindo:</p>
+        <Section title="7. Data Security">
+          <p>We implement appropriate technical and organisational measures to protect your personal data against unauthorised access, loss or destruction, including:</p>
           <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-            <li style={{ marginBottom: 6 }}>Encriptação HTTPS em todas as comunicações</li>
-            <li style={{ marginBottom: 6 }}>Acesso restrito por função (role-based access)</li>
-            <li style={{ marginBottom: 6 }}>Processamento de pagamentos exclusivamente via Stripe (PCI DSS compliant)</li>
+            <li style={{ marginBottom: 6 }}>HTTPS encryption on all communications</li>
+            <li style={{ marginBottom: 6 }}>Role-based access control</li>
+            <li style={{ marginBottom: 6 }}>Payment processing exclusively via Stripe (PCI DSS compliant)</li>
           </ul>
         </Section>
 
-        <Section title="8. Transferências Internacionais de Dados">
-          <p>Os seus dados são principalmente tratados no Reino Unido e na União Europeia. Caso sejam transferidos para outros países, garantimos que existem salvaguardas adequadas em conformidade com o UK GDPR, como Cláusulas Contratuais Padrão (SCCs) ou decisões de adequação.</p>
+        <Section title="8. International Data Transfers">
+          <p>Your data is primarily processed in the United Kingdom and the European Union. Where data is transferred to other countries, we ensure appropriate safeguards are in place in accordance with the UK GDPR, such as Standard Contractual Clauses (SCCs) or adequacy decisions.</p>
         </Section>
 
-        <Section title="9. Alterações a Esta Política">
-          <p>Podemos actualizar esta Política periodicamente. Notificaremos os utilizadores registados sobre alterações significativas por email. A data da última actualização encontra-se no topo desta página.</p>
+        <Section title="9. Changes to this Policy">
+          <p>We may update this Policy periodically. We will notify registered users of significant changes by email. The date of the last update appears at the top of this page.</p>
         </Section>
 
         <div style={{ background: '#141414', border: '1px solid #1c1c1c', borderRadius: 12, padding: '20px 24px', marginTop: 48 }}>
           <p style={{ color: MUTED, fontSize: 13, margin: 0 }}>
-            Para exercer os seus direitos ou para qualquer questão de privacidade, contacte: <a href="mailto:support@uffisolutions.com" style={{ color: ACCENT }}>support@uffisolutions.com</a> · UffiSphere HTJS Ltd · United Kingdom
+            To exercise your rights or for any privacy-related question, contact: <a href="mailto:us@uffisolutions.com" style={{ color: ACCENT }}>us@uffisolutions.com</a> · UffiSphere HTJS Ltd · United Kingdom
           </p>
         </div>
       </div>

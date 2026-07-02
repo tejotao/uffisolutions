@@ -41,7 +41,7 @@ const CTA = () => {
               size="lg" 
               variant="outline" 
               className="border-2 border-white/30 bg-transparent text-white hover:bg-white/10 px-8 py-7 text-lg font-bold rounded-full backdrop-blur-sm"
-              onClick={() => window.location.href = 'mailto:uffisolutions@gmail.com'}
+              onClick={() => window.location.href = 'mailto:us@uffisolutions.com'}
             >
               <Mail className="mr-2 w-6 h-6" />
               {t('cta.email')}

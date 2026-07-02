@@ -21,6 +21,9 @@ import AccessBoard from '@/pages/admin/AccessBoard';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import BlockedPage from '@/pages/BlockedPage';
+import Terms from '@/pages/Terms';
+import Privacy from '@/pages/Privacy';
 
 import '@/styles/globals.css';
 
@@ -68,6 +71,8 @@ function App() {
     );
   }
 
+  const isBlocked = user && user.status === 'blocked' && !user.isSuperAdmin;
+
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Helmet>
@@ -75,12 +80,17 @@ function App() {
         <meta name="description" content="Plataforma de treinamentos digitais e soluções." />
       </Helmet>
       <Router>
+        {isBlocked ? (
+          <BlockedPage />
+        ) : (
         <Routes>
           <Route path="/"        element={user ? <Navigate to="/dashboard" replace /> : <HomePage user={user} />} />
           <Route path="/login"   element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
           <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
 
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/termos"       element={<Terms />} />
+          <Route path="/privacidade" element={<Privacy />} />
 
           <Route path="/products"     element={<ProductsPage user={user} />} />
           <Route path="/products/:id" element={<ProductDetail user={user} />} />
@@ -97,6 +107,7 @@ function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        )}
       </Router>
     </div>
   );

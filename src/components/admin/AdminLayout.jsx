@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Logo from '@/components/uffi/Logo';
 import { logout } from '@/lib/supabaseAuth';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 
 // ─── Navigation groups ────────────────────────────────────────────────────────
 
@@ -141,7 +141,7 @@ export default function AdminLayout({ user, children }) {
   const toggleGroup = (id) =>
     setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const initial     = user?.email?.charAt(0).toUpperCase() ?? 'A';
+  const initial     = getInitials(user?.full_name, user?.email);
   const displayName = user?.email?.split('@')[0] ?? 'Admin';
   const role        = user?.role ?? 'admin';
   const roleStyle   = ROLE_STYLE[role] || { label: role, cls: 'text-zinc-400 bg-zinc-800 border-zinc-700' };

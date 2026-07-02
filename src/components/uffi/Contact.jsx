@@ -35,7 +35,7 @@ const Contact = () => {
             <Button 
               size="lg" 
               className="bg-white text-black hover:bg-gray-200 px-8 py-8 text-lg font-bold rounded-xl shadow-lg flex items-center gap-3 w-full sm:w-auto"
-              onClick={() => window.location.href = 'mailto:uffisolutions@gmail.com'}
+              onClick={() => window.location.href = 'mailto:us@uffisolutions.com'}
             >
               <Mail className="w-6 h-6" />
               {t('contact.email')}

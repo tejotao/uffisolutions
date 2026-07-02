@@ -68,13 +68,15 @@ export const getCurrentUserWithRole = async () => {
       
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin, role, client_code')
+        .select('is_admin, role, client_code, status, full_name')
         .eq('id', user.id)
         .single();
-        
+
       user.is_admin = profile?.is_admin || false;
       user.role = profile?.role || (user.is_admin ? 'admin' : 'user');
       user.client_code = profile?.client_code || null;
+      user.status = profile?.status || 'active';
+      user.full_name = profile?.full_name || null;
       
       if (user.email === 'tejotao@gmail.com') {
         user.is_admin = true;

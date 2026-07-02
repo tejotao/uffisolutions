@@ -1,17 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X, Tags, Check, Wand2, Search, Filter, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Tags, Check, Search, Filter, AlertTriangle } from 'lucide-react';
 import { fetchAllCategories, createCategory, updateCategory, deleteCategory } from '@/lib/catalogQueries';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { canAccess } from '@/lib/rolePermissions';
 
 const EMOJI_ICONS = ['📁', '🎯', '💼', '🎨', '📱', '🚀', '🎓', '💡', '🎬', '🎵', '🎮', '📚'];
-const BRAND_COLORS = [
-  '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', 
-  '#ef4444', '#06b6d4', '#ec4899', '#f97316'
-];
+
+const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
+const slugify = (value) => (value || '')
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(DIACRITICS_RE, "")
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)+/g, '');
 
 export default function AdminCategories({ user }) {
   const [categories, setCategories] = useState([]);
@@ -27,6 +31,9 @@ export default function AdminCategories({ user }) {
   
   const [formData, setFormData] = useState({
     name: '',
+    name_pt: '',
+    name_it: '',
+    name_es: '',
     slug: '',
     description: '',
     icon: '📁',
@@ -86,9 +93,12 @@ export default function AdminCategories({ user }) {
     if (category) {
       setEditingId(category.id);
       setFormData({
-        name: category.name || '',
+        name: category.name_en || '',
+        name_pt: category.name_pt || '',
+        name_it: category.name_it || '',
+        name_es: category.name_es || '',
         slug: category.slug || '',
-        description: category.description || '',
+        description: category.description_raw || '',
         icon: category.icon || '📁',
         color: category.color || '#f59e0b',
         active: category.active ?? true
@@ -97,6 +107,9 @@ export default function AdminCategories({ user }) {
       setEditingId(null);
       setFormData({
         name: '',
+        name_pt: '',
+        name_it: '',
+        name_es: '',
         slug: '',
         description: '',
         icon: '📁',
@@ -114,25 +127,19 @@ export default function AdminCategories({ user }) {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleNameChange = (e) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, name: value, slug: slugify(value) }));
   };
 
   const handleIconSelect = (icon) => setFormData(prev => ({ ...prev, icon }));
   const handleColorSelect = (color) => setFormData(prev => ({ ...prev, color }));
-
-  const generateSlug = () => {
-    if (!formData.name) return;
-    const slug = formData.name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '');
-    setFormData(prev => ({ ...prev, slug }));
-  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -154,6 +161,9 @@ export default function AdminCategories({ user }) {
     try {
       const payload = {
         name: formData.name,
+        name_pt: formData.name_pt || null,
+        name_it: formData.name_it || null,
+        name_es: formData.name_es || null,
         slug: formData.slug,
         description: formData.description,
         icon: formData.icon,
@@ -337,7 +347,7 @@ export default function AdminCategories({ user }) {
 
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-8">
+          <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 sm:p-8">
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
@@ -366,38 +376,64 @@ export default function AdminCategories({ user }) {
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome *</label>
-                      <input 
-                        type="text" 
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (EN) *</label>
+                      <input
+                        type="text"
                         name="name"
                         required
                         value={formData.name}
+                        onChange={handleNameChange}
+                        className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
+                        placeholder="Ex: Digital Marketing"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Slug (URL) *</label>
+                      <input
+                        type="text"
+                        name="slug"
+                        required
+                        value={formData.slug}
+                        onChange={handleInputChange}
+                        className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
+                        placeholder="Gerado automaticamente do Nome (EN)"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (PT-BR)</label>
+                      <input
+                        type="text"
+                        name="name_pt"
+                        value={formData.name_pt}
                         onChange={handleInputChange}
                         className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
                         placeholder="Ex: Marketing Digital"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Slug (URL) *</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          name="slug"
-                          required
-                          value={formData.slug}
-                          onChange={handleInputChange}
-                          className="flex-grow bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
-                          placeholder="Ex: marketing-digital"
-                        />
-                        <button 
-                          type="button" 
-                          onClick={generateSlug}
-                          className="p-3 bg-[#222] border border-[#2a2a2a] rounded-xl text-gray-400 hover:text-[#f59e0b] transition-colors"
-                          title="Gerar automaticamente do nome"
-                        >
-                          <Wand2 size={20} />
-                        </button>
-                      </div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (IT)</label>
+                      <input
+                        type="text"
+                        name="name_it"
+                        value={formData.name_it}
+                        onChange={handleInputChange}
+                        className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
+                        placeholder="Ex: Marketing Digitale"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (ES)</label>
+                      <input
+                        type="text"
+                        name="name_es"
+                        value={formData.name_es}
+                        onChange={handleInputChange}
+                        className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
+                        placeholder="Ex: Marketing Digital"
+                      />
                     </div>
                   </div>
 
@@ -435,20 +471,27 @@ export default function AdminCategories({ user }) {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">Cor de Destaque</label>
-                    <div className="flex flex-wrap gap-4">
-                      {BRAND_COLORS.map(color => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => handleColorSelect(color)}
-                          className={`w-10 h-10 rounded-full transition-all ${
-                            formData.color === color 
-                              ? 'border-[3px] border-white scale-110 shadow-lg' 
-                              : 'border-2 border-transparent hover:scale-110'
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="color"
+                        value={/^#[0-9A-Fa-f]{6}$/.test(formData.color) ? formData.color : '#f59e0b'}
+                        onChange={(e) => handleColorSelect(e.target.value)}
+                        className="w-14 h-14 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] cursor-pointer p-1"
+                        title="Escolher cor"
+                      />
+                      <input
+                        type="text"
+                        value={formData.color}
+                        onChange={(e) => handleColorSelect(e.target.value)}
+                        maxLength={7}
+                        className="flex-grow bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white font-mono focus:outline-none focus:border-[#f59e0b] transition-colors"
+                        placeholder="#f59e0b"
+                      />
+                      <div
+                        className="w-10 h-10 rounded-full border-2 border-white/20 shrink-0"
+                        style={{ backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(formData.color) ? formData.color : 'transparent' }}
+                        title="Preview"
+                      />
                     </div>
                   </div>
 
