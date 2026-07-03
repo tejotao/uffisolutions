@@ -1159,3 +1159,45 @@ Trabalho realizado, tabela por tabela:
 Movidos para `docs/archive/` (documentos de auditoria de sessões anteriores, desatualizados frente ao estado real confirmado nesta sessão): `AUDIT_CHECKLIST.md`, `AUDIT_FINAL_REPORT.md`, `AUTHENTICATION_AUDIT.md`, `DATABASE_AUDIT_RESULTS.md`, `MAGIC_LINK_DIAGNOSIS.md`, `NAVIGATION_AUDIT_COMPLETE.md`, `NAVIGATION_AUDIT_RESULTS.md`, `RELATÓRIO_FINAL.md`, `SUPABASE_AUDIT_REPORT.md` (documentava a integração Supabase como "bloqueada/não autenticada" — obsoleto desde que a conexão real foi estabelecida), `SUPABASE_SETUP_CHECKLIST.md` (schema de 13 tabelas planejado que diverge bastante do schema real confirmado hoje), `SYSTEM_AUDIT_FINAL_REPORT.md`, `TECHNICAL_DOCUMENTATION.md`, `TRANSLATION_AUDIT_COMPLETE.md`, `TRANSLATION_AUDIT_RESULTS.md`.
 
 **Não movidos** (fora do escopo desta limpeza, decisão pendente do usuário): `EMAIL_TEMPLATES.html` (não é documento de auditoria, é referência ativa) e `"uffisolutions-v1.0-28jun2026 codigo Horizons"` (arquivo de 473KB sem extensão clara, não referenciado por nenhum import do código — recomendado o usuário verificar o conteúdo antes de decidir manter, arquivar ou remover).
+
+### Fix pós-deploy: recuperação de senha caindo direto no dashboard (sem trocar senha)
+Teste real do fluxo "esqueci minha senha": o link do email logava o usuário direto no dashboard, sem nunca pedir a nova senha — funcionando como um magic link, não como reset. Causa provável: o Site URL / Redirect URLs do Supabase (Authentication → URL Configuration) ainda não incluíam o domínio novo (`www.uffisolutions.com`), então o `redirectTo: /reset-password` era ignorado e o Supabase mandava pro Site URL padrão (`/`) — como a sessão de recuperação já autentica, cair em `/` com `user` truthy dispara o redirect normal pro `/dashboard`.
+
+`ResetPasswordPage.jsx` já estava correto (exige senha nova, mínimo 6 caracteres, com confirmação, antes de liberar). Adicionada uma camada de defesa em profundidade em `App.jsx`: novo estado `isPasswordRecovery`, ligado no evento `PASSWORD_RECOVERY` do Supabase — força a tela de trocar senha por cima de qualquer rota, independente de onde o navegador aterrissou; desliga sozinho no evento `USER_UPDATED` (senha trocada com sucesso), devolvendo o app ao fluxo normal de rotas. Não substitui o ajuste no painel do Supabase (fica como pendência do usuário, feito fora do código), é complementar.
+
+Commit `5362d90`, testado em produção, zero erro de console.
+
+---
+
+## Sessão 03/07/2026 — Slugs amigáveis de produto + página "My Library"
+
+### URLs de produto: UUID → slug
+`ProductDetail.jsx` já sabia buscar por `slug` OU `id` (`p.id === id || p.slug === id`) — o problema era só que os 3 lugares que montam o link (`HomePage.jsx`, `ProductsPage.jsx`, produtos relacionados em `ProductDetail.jsx`) usavam `product.id`. Trocados os 3 pontos pra `product.slug || product.id` (fallback preserva compatibilidade com qualquer link antigo por UUID).
+
+`AdminProducts.jsx` já gerava slug automaticamente a partir do nome, mas sem garantia de unicidade (dois produtos com nome parecido colidiriam na coluna `UNIQUE`). Corrigido: `makeUniqueSlug()` gera `nome-slugificado` + sufixo aleatório de 6 caracteres, sempre. Também corrigido um bug latente: o slug era regenerado a cada edição (não só na criação) — significava que editar o nome de um produto já publicado trocava a URL dele, quebrando link já compartilhado. Agora o slug só é gerado no create; update nunca toca nele.
+
+### Nova página `/library`
+Pedido do usuário: em vez do modal por produto (`AccessModal`), uma página agregada mostrando tudo que o usuário já desbloqueou, organizada por **tipo de entregável** (não por produto) — um produto com só 1 PDF aparece só na seção de PDFs, sem seções vazias pros tipos que não tem.
+
+Reaproveita a mesma lógica de "fonte de verdade" de acessos já usada no `UserDashboard.jsx` (`purchases` + `user_product_access`, excluindo o legado `profiles.product_access`) e a mesma renderização por tipo do `AccessModal.jsx` — `DeliverableItem` e `ExpiryIndicator` foram exportados de lá (antes só usados internamente) especificamente pra esse reuso, sem alterar o comportamento do modal em si.
+
+Conteúdo da página:
+- Stats básicas: total de produtos desbloqueados, contagem por tipo de entregável (só os tipos que o usuário realmente tem), produtos expirando em ≤7 dias
+- Banner discreto "New on the platform": últimos 3 produtos cadastrados na plataforma (`fetchAllProductsAllLanguages()`, sem filtro de idioma nem de propriedade — é vitrine, não conteúdo do usuário)
+- Seções por tipo (PDFs/Videos/Audio/Google Drive/etc.), cada item mostrando o nome do produto de origem
+- Rodapé de suporte discreto: "Need any support? us@uffisolutions.com"
+
+Rota `/library` registrada em `App.jsx` (protegida, mesmo padrão do `/dashboard`), entrada de navegação adicionada no topbar do `UserDashboard.jsx` (ícone `Library`, ao lado de Home/Catalog).
+
+### AccessModal retirado de circulação (mantido como módulo compartilhado)
+Depois de ver a página nova funcionando, o usuário pediu pra desativar o modal por completo e deixar só a `/library`. Todos os pontos que abriam `AccessModal` (`UserDashboard.jsx` — cards de produto; `ProductDetail.jsx` — botão "Access Content" e auto-claim de produto grátis) agora fazem `navigate('/library')` em vez de abrir o modal. O arquivo `AccessModal.jsx` **não foi apagado** — continua sendo o módulo fonte de `DeliverableItem`/`ExpiryIndicator`/`groupDeliverablesByType`/`resolveDeliverables` usados pela `/library`. Limpeza acompanhante em `ProductDetail.jsx`: removido o fetch de deliverables (que ficou morto) e o estado `accessProduct`; import `motion`/`AnimatePresence` também removido (já estava sem uso antes desta mudança).
+
+### Testado e confirmado em produção (navegador real, cliques reais)
+- `/products/personal-shopper-internacional` carrega pelo slug, zero erro
+- `/library` renderiza stats/banner/seções corretas com o único produto real hoje (1 PDF, 1 áudio, 1 Google Drive)
+- Clique em "Access" no dashboard e em "Access Content" no `ProductDetail` — ambos navegam pra `/library`, nenhum modal abre
+
+Commits: `ed81da1` (slugs + Library), `b18e7c4` (retirada do modal).
+
+### Pendente
+Só existe 1 produto cadastrado na plataforma até agora — o layout da `/library` (e o comportamento do banner "New on the platform" com mais de 3 produtos, várias seções de tipo ao mesmo tempo, etc.) ainda não foi visto com catálogo maior. Usuário vai cadastrar mais produtos e reavaliar o visual antes de qualquer ajuste fino.
