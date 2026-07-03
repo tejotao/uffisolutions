@@ -1199,5 +1199,35 @@ Depois de ver a página nova funcionando, o usuário pediu pra desativar o modal
 
 Commits: `ed81da1` (slugs + Library), `b18e7c4` (retirada do modal).
 
-### Pendente
+### Pendente (revisado — ver sessão seguinte)
 Só existe 1 produto cadastrado na plataforma até agora — o layout da `/library` (e o comportamento do banner "New on the platform" com mais de 3 produtos, várias seções de tipo ao mesmo tempo, etc.) ainda não foi visto com catálogo maior. Usuário vai cadastrar mais produtos e reavaliar o visual antes de qualquer ajuste fino.
+
+### Fix: link previews mostrando "Hostinger Horizons" em vez de UffiSolutions
+Ao compartilhar o link do site (WhatsApp, Telegram, LinkedIn), a prévia vinha com "Hostinger Horizons". Causa: esses bots de preview leem o HTML puro do `index.html`, sem executar JavaScript — então nunca viam o `<title>`/descrição que o `Helmet` define via React, só o que estava fixo no arquivo. O `index.html` tinha `<title>Hostinger Horizons</title>` fixo, **zero tags Open Graph/Twitter Card**, e o favicon apontava pra `/vite.svg` — arquivo que nem existe (404, sobra do template padrão do Vite).
+
+Corrigido: título fixo atualizado, adicionadas tags `og:*`/`twitter:*` completas, e favicon trocado pra apontar pra logo real do site (mesma URL já usada no Header/Footer) em vez do `public/favicon.svg` que existia no repo mas era um design de bandeira do Reino Unido não relacionado à marca. Confirmado via `curl` direto na produção que o HTML puro retorna tudo certo agora.
+
+Commit `021ac3f`.
+
+---
+
+## Sessão 03/07/2026 (cont.) — Library refeita: de "biblioteca agregada" pra página por produto
+
+**Motivação:** a versão anterior da `/library` (agregando todos os produtos desbloqueados numa única página, com stats e banner "recém-adicionados") ficou poluída na prática assim que testada — usuário pediu pra simplificar radicalmente: uma página por produto, chamada a partir de cada botão "Access", sem estatísticas.
+
+### Novo desenho
+- Rota mudou de `/library` (agregada) pra **`/library/:productId`** (aceita slug ou UUID, mesmo padrão de fallback do `ProductDetail.jsx`)
+- Cada clique em "Access" (cards do `UserDashboard.jsx`) ou "Access Content" (`ProductDetail.jsx`, incluindo o fluxo de auto-claim de produto grátis) agora navega pra `/library/{slug-ou-id-do-produto-clicado}` — antes ia todo mundo pra uma `/library` genérica
+- Removido do topbar do `UserDashboard.jsx` o ícone/botão genérico "My Library" — não fazia mais sentido sem destino fixo (a lista de produtos desbloqueados já é o próprio dashboard)
+- Página nova: imagem pequena do produto + título + chip de categoria, fundo com gradiente radial suave usando a cor da categoria (não mais fundo neutro), lista **plana** de entregáveis (sem cabeçalhos de seção por tipo) ordenada por `created_at` decrescente (mais recente primeiro) — cada item ainda usa o `DeliverableItem` já existente (mesmos players de áudio/vídeo nativo, embeds de YouTube/Vimeo/Spotify com thumbnail, etc.), só sem o agrupamento visual por tipo
+- Cada entregável ganhou um link discreto "Give feedback on this" (`mailto:us@uffisolutions.com`, assunto pré-preenchido com produto + nome do entregável) — decisão explícita do usuário: versão simples via email do cliente, sem form/backend novo
+- Estado de "sem acesso" tratado na própria página (usuário loga, mas não tem esse produto → mensagem + botão pra ver a página pública do produto) em vez de assumir que quem chega ali sempre tem acesso
+
+**Adiado por decisão do usuário** (não bloqueante, considerar depois): marcar entregável como "visto" por usuário — precisaria de tabela nova, ainda não existe em lugar nenhum do sistema.
+
+Commit `49720ff`.
+
+### Incidente: travamento de baixo nível do git na pasta local (mesma classe do travamento do esbuild)
+Durante o commit desta mudança, `git commit`/`git push`/até `git log -1`/`cat` num objeto de 375 bytes dentro de `.git/objects/` começaram a travar indefinidamente na pasta local do projeto — confirmado via `sample` (processo preso em `mmap()`/`read()` do kernel, não em lógica do próprio git). `brctl` (daemon de iCloud) negou acesso, e um `ls` direto na pasta `Documents` (não no projeto) retornou "Operation not permitted" — indício de alguma interação de sandbox/iCloud nessa máquina, mesma característica geral do travamento do `esbuild` do início do dia, mas agora afetando o git.
+
+**Contornado**: clonado o repositório do zero num diretório temporário limpo, copiados os arquivos modificados pra lá, commit e push feitos de lá com sucesso — sem tocar no objeto travado. **A pasta original (aberta no VS Code do usuário) continuou com o git travado** ao final desta sessão; os arquivos de código nela estão corretos (foram editados diretamente ali), só o histórico do git local ficou desatualizado. Recomendado ao usuário reiniciar o VS Code ou a máquina antes do próximo `git pull` por lá.
