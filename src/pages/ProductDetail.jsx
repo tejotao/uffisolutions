@@ -1,16 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, grantProductAccess } from '@/lib/accessQueries';
-import { getDeliverablesForProduct } from '@/lib/deliverableQueries';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
-import AccessModal from '@/components/uffi/AccessModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ProductDetail({ user }) {
@@ -18,15 +15,13 @@ export default function ProductDetail({ user }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { language, t } = useLanguage();
-  
+
   const [product, setProduct]           = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [isFavorite, setIsFavorite]     = useState(false);
   const [hasAccess, setHasAccess]       = useState(false);
   const [isGranting, setIsGranting]     = useState(false);
-  const [deliverables, setDeliverables] = useState([]);
-  const [accessProduct, setAccessProduct] = useState(null); // opens modal
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -43,17 +38,15 @@ export default function ProductDetail({ user }) {
           }).slice(0, 3);
           setRelatedProducts(related);
 
-          // Check user access + load deliverables in parallel
+          // Check user access
           if (user) {
-            const [purchases, accesses, delivs] = await Promise.all([
+            const [purchases, accesses] = await Promise.all([
               getUserPurchases(user.email),
               getMyActiveAccesses(user.id),
-              getDeliverablesForProduct(found.id),
             ]);
             const purchasedIds = new Set((purchases || []).map(p => p.product_id));
             const accessIds    = new Set((accesses  || []).map(a => a.id));
             setHasAccess(purchasedIds.has(found.id) || accessIds.has(found.id));
-            setDeliverables(delivs);
           }
         } else {
           setProduct(null);
@@ -101,23 +94,21 @@ export default function ProductDetail({ user }) {
         expiryDate: null, grantedBy: user.id, notes: 'Self-claimed free product',
       });
       // Even if RLS blocks the DB write (SQL policy not yet applied),
-      // still open the modal so the user can access the content.
+      // still send the user to their library so they can access the content.
       if (!error) {
         setHasAccess(true);
         toast({ title: '🎁 Access granted!', description: 'Added to your library.', className: 'border-emerald-500 bg-zinc-900 text-white' });
       }
-      // Always open the modal for free products — content is accessible regardless
-      setAccessProduct({ ...product, _deliverables: deliverables });
+      navigate('/library');
     } catch {
-      // Fallback: open modal anyway (free product = accessible)
-      setAccessProduct({ ...product, _deliverables: deliverables });
+      // Fallback: go to library anyway (free product = accessible)
+      navigate('/library');
     } finally {
       setIsGranting(false);
     }
   };
 
-  const openAccessModal = () =>
-    setAccessProduct({ ...product, _deliverables: deliverables });
+  const openAccessModal = () => navigate('/library');
 
   if (loading) {
     return (
@@ -155,12 +146,6 @@ export default function ProductDetail({ user }) {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans selection:bg-[#f59e0b]/30">
-      <AnimatePresence>
-        {accessProduct && (
-          <AccessModal product={accessProduct} onClose={() => setAccessProduct(null)} />
-        )}
-      </AnimatePresence>
-
       <Header user={user} isAdminPage={false} />
       
       <main className="flex-grow pt-24 pb-16">

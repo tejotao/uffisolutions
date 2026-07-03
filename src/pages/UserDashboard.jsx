@@ -7,7 +7,7 @@ import {
   User, Loader2, Copy, Download, ExternalLink, Play, CheckCircle, ChevronRight, Clock,
   ShieldAlert, Lock, UserCog, Library,
 } from 'lucide-react';
-import AccessModal, { resolveDeliverables, groupDeliverablesByType, DELIVERY_CONFIG, getDeliveryConfig } from '@/components/uffi/AccessModal';
+import { resolveDeliverables } from '@/components/uffi/AccessModal';
 import ProfileModal from '@/components/uffi/ProfileModal';
 import { getUserRole, ROLES } from '@/lib/rolePermissions';
 import Footer from '@/components/uffi/Footer';
@@ -313,9 +313,6 @@ export default function UserDashboard({ user }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Access modal state
-  const [accessProduct, setAccessProduct] = useState(null);
-
   // First-login welcome modal state
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [welcomeLanguage, setWelcomeLanguage] = useState('pt');
@@ -469,13 +466,6 @@ export default function UserDashboard({ user }) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col font-sans">
-
-      {/* ── Access modal ── */}
-      <AnimatePresence>
-        {accessProduct && (
-          <AccessModal product={accessProduct} onClose={() => setAccessProduct(null)} />
-        )}
-      </AnimatePresence>
 
       {/* ── Profile modal ── */}
       <AnimatePresence>
@@ -660,7 +650,7 @@ export default function UserDashboard({ user }) {
                 <SectionTitle icon={Package} label="Unlocked Products" count={purchasedProducts.length} iconColor="text-amber-400" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {purchasedProducts.map((product, i) => (
-                    <ProductCard key={`p-${product.id}`} product={product} index={i} onFallback={(p) => setAccessProduct(p)} />
+                    <ProductCard key={`p-${product.id}`} product={product} index={i} onFallback={() => navigate('/library')} />
                   ))}
                 </div>
               </section>
@@ -670,7 +660,7 @@ export default function UserDashboard({ user }) {
                 <SectionTitle icon={BookOpen} label="Free Resources" count={freeProducts.length} iconColor="text-emerald-400" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {freeProducts.map((product, i) => (
-                    <ProductCard key={`f-${product.id}`} product={product} index={i} onFallback={(p) => setAccessProduct(p)} />
+                    <ProductCard key={`f-${product.id}`} product={product} index={i} onFallback={() => navigate('/library')} />
                   ))}
                 </div>
               </section>
