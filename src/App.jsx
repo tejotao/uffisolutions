@@ -13,6 +13,7 @@ import HomePage from '@/pages/HomePage';
 import ProductsPage from '@/pages/ProductsPage';
 import ProductDetail from '@/pages/ProductDetail';
 import UserDashboard from '@/pages/UserDashboard';
+import LibraryPage from '@/pages/LibraryPage';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminProducts from '@/pages/admin/AdminProducts';
 import AdminCategories from '@/pages/admin/AdminCategories';
@@ -106,6 +107,9 @@ function App() {
 
           <Route path="/dashboard" element={
             <ProtectedRoute user={user}><UserDashboard user={user} /></ProtectedRoute>
+          } />
+          <Route path="/library" element={
+            <ProtectedRoute user={user}><LibraryPage user={user} /></ProtectedRoute>
           } />
 
           <Route path="/admin"              element={<AdminRoute user={user}><AdminDashboard user={user} /></AdminRoute>} />

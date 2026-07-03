@@ -155,7 +155,7 @@ export default function HomePage({ user }) {
                     >
                       <div 
                         className={`bg-[#141414] border rounded-2xl overflow-hidden transition-colors group flex flex-col h-full cursor-pointer ${isFree ? 'border-green-500/40 hover:border-green-500/80 shadow-[0_0_15px_rgba(34,197,94,0.05)] hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
-                        onClick={() => navigate(isFree && !user ? '/login' : `/products/${product.id}`)}
+                        onClick={() => navigate(isFree && !user ? '/login' : `/products/${product.slug || product.id}`)}
                       >
                         <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">
                           {isFree && (

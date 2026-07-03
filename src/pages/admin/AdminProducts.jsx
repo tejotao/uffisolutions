@@ -24,6 +24,18 @@ const PRODUCT_TYPES = [
   { value: 'other',    label: 'Other',         icon: Globe,        color: 'text-zinc-400',   bg: 'bg-zinc-500/10',   border: 'border-zinc-500/30',   desc: 'Any other content type' },
 ];
 
+// Slugify + random suffix — guarantees uniqueness without a lookup/round-trip,
+// so two products with the same name never collide on the UNIQUE slug column.
+const slugify = (str) =>
+  (str || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const makeUniqueSlug = (name) => `${slugify(name)}-${Math.random().toString(36).slice(2, 8)}`;
+
 const PROVIDER_OPTIONS = [
   { value: '',         label: '— Auto detect —' },
   { value: 'youtube',  label: '▶ YouTube' },
@@ -176,7 +188,6 @@ export default function AdminProducts({ user }) {
       const payload = {
         name:         formData.name,
         title:        formData.name,
-        slug:         formData.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
         description:  formData.description,
         price:        parseFloat(formData.price) || 0,
         is_free:      parseFloat(formData.price) === 0,
@@ -188,6 +199,11 @@ export default function AdminProducts({ user }) {
         active:       formData.active,
         stripe_link:  formData.stripe_link || null,
       };
+      // Slug is only generated on create — editing a product must never change
+      // its URL (would break already-shared links / SEO).
+      if (!editingId) {
+        payload.slug = makeUniqueSlug(formData.name);
+      }
       const result = editingId ? await updateProduct(editingId, payload) : await createProduct(payload);
       if (result.error) throw result.error;
 

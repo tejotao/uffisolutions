@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Package, AlertCircle, Search, Home, LogOut,
   User, Loader2, Copy, Download, ExternalLink, Play, CheckCircle, ChevronRight, Clock,
-  ShieldAlert, Lock, UserCog,
+  ShieldAlert, Lock, UserCog, Library,
 } from 'lucide-react';
 import AccessModal, { resolveDeliverables, groupDeliverablesByType, DELIVERY_CONFIG, getDeliveryConfig } from '@/components/uffi/AccessModal';
 import ProfileModal from '@/components/uffi/ProfileModal';
@@ -546,6 +546,9 @@ export default function UserDashboard({ user }) {
         <div className="flex items-center gap-1">
           <button onClick={() => navigate('/')} title="Home" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
             <Home size={18} />
+          </button>
+          <button onClick={() => navigate('/library')} title="My Library" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
+            <Library size={18} />
           </button>
           <button onClick={() => navigate('/products')} title="Catalog" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
             <Package size={18} />

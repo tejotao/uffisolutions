@@ -327,7 +327,7 @@ export default function ProductDetail({ user }) {
                 return (
                   <div 
                     key={rp.id}
-                    onClick={() => navigate(rpIsFree && !user ? '/login' : `/products/${rp.id}`)}
+                    onClick={() => navigate(rpIsFree && !user ? '/login' : `/products/${rp.slug || rp.id}`)}
                     className={`bg-[#141414] border rounded-2xl overflow-hidden cursor-pointer transition-colors group flex flex-col ${rpIsFree ? 'border-green-500/40 hover:border-green-500/80' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
                   >
                     <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">

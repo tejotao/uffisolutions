@@ -93,7 +93,7 @@ const getSpotifyEmbedUrl = (url) => {
 
 // ─── Expiry indicator ─────────────────────────────────────────────────────────
 
-function ExpiryIndicator({ expiryDate }) {
+export function ExpiryIndicator({ expiryDate }) {
   if (!expiryDate) return null;
   const days = daysUntilExpiry(expiryDate);
   if (days < 0) return (
@@ -231,7 +231,7 @@ function EmbedFrame({ src, title, aspectRatio = '16/9', height, thumbnail, exter
 
 // ─── Single deliverable renderer ──────────────────────────────────────────────
 
-function DeliverableItem({ item, groupConfig, idx, totalInGroup }) {
+export function DeliverableItem({ item, groupConfig, idx, totalInGroup }) {
   const provider  = (item.provider || '').toLowerCase();
   const type      = (item.type    || 'other').toLowerCase();
   const url       = safeUrl(item.url);
