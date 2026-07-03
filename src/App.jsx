@@ -108,7 +108,7 @@ function App() {
           <Route path="/dashboard" element={
             <ProtectedRoute user={user}><UserDashboard user={user} /></ProtectedRoute>
           } />
-          <Route path="/library" element={
+          <Route path="/library/:productId" element={
             <ProtectedRoute user={user}><LibraryPage user={user} /></ProtectedRoute>
           } />
 

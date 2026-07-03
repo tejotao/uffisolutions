@@ -99,16 +99,16 @@ export default function ProductDetail({ user }) {
         setHasAccess(true);
         toast({ title: '🎁 Access granted!', description: 'Added to your library.', className: 'border-emerald-500 bg-zinc-900 text-white' });
       }
-      navigate('/library');
+      navigate(`/library/${product.slug || product.id}`);
     } catch {
       // Fallback: go to library anyway (free product = accessible)
-      navigate('/library');
+      navigate(`/library/${product.slug || product.id}`);
     } finally {
       setIsGranting(false);
     }
   };
 
-  const openAccessModal = () => navigate('/library');
+  const openAccessModal = () => navigate(`/library/${product.slug || product.id}`);
 
   if (loading) {
     return (

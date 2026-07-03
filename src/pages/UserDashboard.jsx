@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Package, AlertCircle, Search, Home, LogOut,
   User, Loader2, Copy, Download, ExternalLink, Play, CheckCircle, ChevronRight, Clock,
-  ShieldAlert, Lock, UserCog, Library,
+  ShieldAlert, Lock, UserCog,
 } from 'lucide-react';
 import { resolveDeliverables } from '@/components/uffi/AccessModal';
 import ProfileModal from '@/components/uffi/ProfileModal';
@@ -537,9 +537,6 @@ export default function UserDashboard({ user }) {
           <button onClick={() => navigate('/')} title="Home" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
             <Home size={18} />
           </button>
-          <button onClick={() => navigate('/library')} title="My Library" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
-            <Library size={18} />
-          </button>
           <button onClick={() => navigate('/products')} title="Catalog" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
             <Package size={18} />
           </button>
@@ -650,7 +647,7 @@ export default function UserDashboard({ user }) {
                 <SectionTitle icon={Package} label="Unlocked Products" count={purchasedProducts.length} iconColor="text-amber-400" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {purchasedProducts.map((product, i) => (
-                    <ProductCard key={`p-${product.id}`} product={product} index={i} onFallback={() => navigate('/library')} />
+                    <ProductCard key={`p-${product.id}`} product={product} index={i} onFallback={(p) => navigate(`/library/${p.slug || p.id}`)} />
                   ))}
                 </div>
               </section>
@@ -660,7 +657,7 @@ export default function UserDashboard({ user }) {
                 <SectionTitle icon={BookOpen} label="Free Resources" count={freeProducts.length} iconColor="text-emerald-400" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {freeProducts.map((product, i) => (
-                    <ProductCard key={`f-${product.id}`} product={product} index={i} onFallback={() => navigate('/library')} />
+                    <ProductCard key={`f-${product.id}`} product={product} index={i} onFallback={(p) => navigate(`/library/${p.slug || p.id}`)} />
                   ))}
                 </div>
               </section>
