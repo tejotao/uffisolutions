@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   }
 
   const session = event.data.object;
-  const [userId, productId] = (session.client_reference_id || '').split(':');
+  const [userId, productId] = (session.client_reference_id || '').split('_');
   console.log('stripe-webhook: checkout.session.completed', { sessionId: session.id, clientReferenceId: session.client_reference_id, userId, productId });
 
   if (!userId || !productId) {
