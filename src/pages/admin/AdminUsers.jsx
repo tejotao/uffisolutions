@@ -715,6 +715,7 @@ export default function AdminUsers({ user }) {
           <UserProfileModal
             key={profileTarget.id}
             targetUser={profileTarget}
+            isSelf={profileTarget.id === user?.id}
             onClose={() => setProfileTarget(null)}
             onSaved={load}
           />

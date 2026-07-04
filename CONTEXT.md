@@ -1231,3 +1231,32 @@ Commit `49720ff`.
 Durante o commit desta mudança, `git commit`/`git push`/até `git log -1`/`cat` num objeto de 375 bytes dentro de `.git/objects/` começaram a travar indefinidamente na pasta local do projeto — confirmado via `sample` (processo preso em `mmap()`/`read()` do kernel, não em lógica do próprio git). `brctl` (daemon de iCloud) negou acesso, e um `ls` direto na pasta `Documents` (não no projeto) retornou "Operation not permitted" — indício de alguma interação de sandbox/iCloud nessa máquina, mesma característica geral do travamento do `esbuild` do início do dia, mas agora afetando o git.
 
 **Contornado**: clonado o repositório do zero num diretório temporário limpo, copiados os arquivos modificados pra lá, commit e push feitos de lá com sucesso — sem tocar no objeto travado. **A pasta original (aberta no VS Code do usuário) continuou com o git travado** ao final desta sessão; os arquivos de código nela estão corretos (foram editados diretamente ali), só o histórico do git local ficou desatualizado. Recomendado ao usuário reiniciar o VS Code ou a máquina antes do próximo `git pull` por lá.
+
+---
+
+## Sessão 04/07/2026 — Perfil: ajuste de UX na classificação (admin) + Integração Stripe (liberação automática de acesso)
+
+### Perfil — classificação do admin não podia ser testada contra a própria conta
+Ao revisar `UserProfileModal.jsx` (feature já implementada em 01/07/2026), identificado que a trigger `prevent_self_privilege_escalation` bloqueia — corretamente, por design — o próprio admin de alterar sua própria `classification`. Como o botão "View Profile" (`AdminUsers.jsx`) não distinguia a própria conta das demais, o admin podia abrir o próprio perfil, escolher uma classificação e tomar um erro genérico ao salvar, sem entender o motivo.
+
+**Corrigido**: `AdminUsers.jsx` agora passa `isSelf={profileTarget.id === user?.id}` pro `UserProfileModal`; quando `isSelf`, o dropdown e o botão "Save Classification" ficam desabilitados com nota "You cannot classify your own account." O catch de erro também passou a detectar a mensagem específica da trigger (`protected fields`) e mostrar "You cannot set your own classification" em vez do genérico "Error updating classification".
+
+### Descoberta importante: páginas de "curso" são órfãs
+Ao investigar onde conectar o Stripe, descoberto que **`ProductDetail.jsx` (rota `/products/:id`) é o único fluxo de compra realmente em uso**. `ProductCard.jsx`, `CourseCard.jsx`, `CourseDetailPage.jsx`, `CourseCheckoutPage.jsx`, `ProductPage.jsx` e `ClientView.jsx` navegam para rotas `/course/:slug` e `/produto/:slug` que **não existem** em `App.jsx` (caem no catch-all) — resíduos órfãos de uma iteração antiga do template, mesmo padrão já visto em `ProfilePage.jsx`/`UserAvatar.jsx`. Não apagados, só não tocados nesta mudança.
+
+### Stripe — liberação automática de acesso após pagamento
+**Motivação:** até agora, comprar só abria o Payment Link do Stripe; a liberação de acesso dependia de um admin usar o `GrantModal` manualmente depois. Objetivo: fechar o laço sozinho via webhook.
+
+**Implementado:**
+- `sql/2026-07-04_stripe_access_release.sql` — nova coluna `products.access_duration_days` (INTEGER, NULL = acesso vitalício). Duração configurável **por produto**, não fixa.
+- `AdminProducts.jsx` — novo campo "⏳ Access Duration (days)" no formulário do produto, ao lado do link do Stripe.
+- `ProductDetail.jsx` (`handleBuy`) — agora exige login (mesmo padrão do `handleFreeAccess`) e anexa `client_reference_id=<userId>:<productId>` + `prefilled_email=<email>` na URL do Payment Link antes de abrir (Stripe repassa esses parâmetros pra Checkout Session e pro webhook).
+- `api/stripe-webhook.js` (novo, Vercel Serverless Function, detectada automaticamente por estar em `/api`) — valida assinatura (`STRIPE_WEBHOOK_SECRET`), escuta `checkout.session.completed`, lê `client_reference_id`, busca `access_duration_days` do produto, calcula `expiry_date` e faz upsert em `user_product_access` (mesmo formato usado por `grantProductAccess()` em `accessQueries.js`) usando a Supabase **service role key** (bypassa RLS — não precisou de policy nova). Também grava um registro em `purchases` para auditoria (reaproveita as colunas já usadas por `createPurchase()` em `purchaseQueries.js`), de forma não-bloqueante.
+- Nova dependência: `stripe` (SDK Node oficial) — `package.json`.
+
+**Env vars novas, server-only (sem prefixo `VITE_`, não podem ir pro bundle do client):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+### ⏳ Pendente (não concluído nesta sessão)
+- Usuário ainda precisa: (1) pegar `STRIPE_SECRET_KEY` no dashboard do Stripe, (2) criar o webhook endpoint no Stripe apontando pra URL do deploy + evento `checkout.session.completed` (gera o `STRIPE_WEBHOOK_SECRET`), (3) pegar `SUPABASE_SERVICE_ROLE_KEY` no Supabase, (4) colar as 3 nas env vars do Vercel (e `.env.local` se for testar local), (5) rodar a migration no Supabase.
+- Teste ponta a ponta em modo teste do Stripe ainda não feito (depende dos passos acima + deploy — `/api` não roda no `vite dev` local, só depois de deployado ou via `vercel dev`).
+- Reembolso/estorno não tratado (não revoga acesso automaticamente) — não pedido nesta rodada.

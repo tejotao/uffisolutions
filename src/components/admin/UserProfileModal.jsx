@@ -23,7 +23,7 @@ const ReadField = ({ label, value }) => (
   </div>
 );
 
-export default function UserProfileModal({ targetUser, onClose, onSaved }) {
+export default function UserProfileModal({ targetUser, onClose, onSaved, isSelf }) {
   const { toast } = useToast();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,8 +54,11 @@ export default function UserProfileModal({ targetUser, onClose, onSaved }) {
       toast({ title: 'Classification updated', className: 'border-emerald-500 bg-zinc-900 text-white' });
       onSaved?.();
       onClose();
-    } catch {
-      toast({ title: 'Error updating classification', variant: 'destructive' });
+    } catch (error) {
+      const message = error?.message?.includes('protected fields')
+        ? 'You cannot set your own classification'
+        : 'Error updating classification';
+      toast({ title: message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -106,13 +109,17 @@ export default function UserProfileModal({ targetUser, onClose, onSaved }) {
                 <select
                   value={classification}
                   onChange={(e) => setClassification(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors appearance-none"
+                  disabled={isSelf}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">— Not set —</option>
                   {CLASSIFICATION_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
+                {isSelf && (
+                  <p className="text-xs text-zinc-500 mt-1.5">You cannot classify your own account.</p>
+                )}
               </div>
 
               <div className="border-t border-zinc-800 pt-4 grid grid-cols-2 gap-4">
@@ -141,7 +148,7 @@ export default function UserProfileModal({ targetUser, onClose, onSaved }) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || loading}
+            disabled={saving || loading || isSelf}
             className={cn('px-6 py-2.5 rounded-xl font-bold bg-amber-500 hover:bg-amber-600 text-black transition-colors disabled:opacity-50 flex items-center gap-2')}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}

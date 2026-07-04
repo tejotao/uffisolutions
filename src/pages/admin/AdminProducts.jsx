@@ -81,7 +81,7 @@ export default function AdminProducts({ user }) {
     language: 'pt', level: 'beginner', image_url: '',
     is_featured: false, active: true,
     // ── Tab 2: Content ──
-    stripe_link: '',
+    stripe_link: '', access_duration_days: '',
     deliverables: [], // [{ type, label, url }]
   });
 
@@ -141,6 +141,7 @@ export default function AdminProducts({ user }) {
         is_featured:  product.featured || product.is_featured || false,
         active:       product.active ?? true,
         stripe_link:  product.stripe_payment_link || product.stripe_link || '',
+        access_duration_days: product.access_duration_days ?? '',
         deliverables: (deliverablesMap.get(product.id) || []).map((d) => ({
           id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url,
           go_unlisted_at: d.go_unlisted_at || '',
@@ -165,7 +166,7 @@ export default function AdminProducts({ user }) {
         category_id: categories[0]?.id || '',
         language: 'pt', level: 'beginner', image_url: '',
         is_featured: false, active: true,
-        stripe_link: '', deliverables: [],
+        stripe_link: '', access_duration_days: '', deliverables: [],
       });
       setIsModalOpen(true);
     }
@@ -198,6 +199,7 @@ export default function AdminProducts({ user }) {
         featured:     permissions.canFeature ? formData.is_featured : false,
         active:       formData.active,
         stripe_link:  formData.stripe_link || null,
+        access_duration_days: formData.access_duration_days ? parseInt(formData.access_duration_days, 10) : null,
       };
       // Slug is only generated on create — editing a product must never change
       // its URL (would break already-shared links / SEO).
@@ -742,6 +744,14 @@ export default function AdminProducts({ user }) {
                             placeholder="https://buy.stripe.com/..."
                             className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
                           <p className="text-[10px] text-zinc-600 mt-1.5">Payment link for this product (£{parseFloat(formData.price || 0).toFixed(2)})</p>
+
+                          <label className="text-xs font-semibold text-amber-400 mb-1.5 mt-4 block flex items-center gap-1.5">
+                            ⏳ Access Duration (days)
+                          </label>
+                          <input type="number" min="1" step="1" name="access_duration_days" value={formData.access_duration_days} onChange={onChange}
+                            placeholder="Leave empty for lifetime access"
+                            className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
+                          <p className="text-[10px] text-zinc-600 mt-1.5">How long access lasts after a Stripe purchase. Empty = lifetime.</p>
                         </div>
                       )}
                     </motion.div>

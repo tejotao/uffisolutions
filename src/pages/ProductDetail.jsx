@@ -80,9 +80,13 @@ export default function ProductDetail({ user }) {
   };
 
   const handleBuy = () => {
+    if (!user) { navigate('/register'); return; }
     const link = product.stripe_link || product.stripe_payment_link;
-    if (link) { window.open(link, '_blank'); }
-    else { toast({ title: t('toast.error'), description: 'Payment link not configured yet.', variant: 'destructive' }); }
+    if (!link) { toast({ title: t('toast.error'), description: 'Payment link not configured yet.', variant: 'destructive' }); return; }
+    const url = new URL(link);
+    url.searchParams.set('client_reference_id', `${user.id}:${product.id}`);
+    url.searchParams.set('prefilled_email', user.email);
+    window.open(url.toString(), '_blank');
   };
 
   const handleFreeAccess = async () => {

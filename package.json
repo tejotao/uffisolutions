@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite --port 3000",
@@ -69,6 +69,7 @@
     "react-use": "^17.4.0",
     "recharts": "^3.8.1",
     "sonner": "^2.0.7",
+    "stripe": "^22.3.0",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",
     "terser": "^5.37.0",
