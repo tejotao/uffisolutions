@@ -138,6 +138,17 @@ export const deleteProduct = async (id) => {
   }
 };
 
+// Fire-and-forget, anonymous — no user_id/email collected on purpose.
+// Failures are swallowed since this is best-effort analytics, not a
+// user-facing feature.
+export const logSearch = async (query, language) => {
+  try {
+    await supabase.from('search_logs').insert({ query, language });
+  } catch {
+    // ignore — non-critical
+  }
+};
+
 // --- LANGUAGES ---
 export const fetchLanguages = async () => {
   try {

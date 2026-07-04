@@ -1307,6 +1307,39 @@ Verificação direta e independente do relato do usuário, em vez de só confiar
 - Pedir o log completo do Vercel (`console.error` com o objeto de erro do Postgres, incluindo `code`) em vez de só o texto genérico da resposta do webhook — os códigos `42703` e `42501` identificaram os bugs 2 e 3 na hora, sem chute.
 
 ### Pendente
-- Testar com uma conta nova (registro do zero, primeiro login, primeira compra) — em andamento pelo usuário no momento em que essa nota foi escrita.
 - Preço divergente num produto de teste (mostra "£7" no catálogo do site, mas o Payment Link do Stripe cobra "£1") — resíduo de teste, ajustar quando for organizar o catálogo de verdade, não é bug.
 - Migrar pra chaves **live** do Stripe (hoje só testado em sandbox/test mode) quando for pra produção de verdade — precisa de um webhook novo em modo live (ambiente separado do sandbox).
+
+**✅ Confirmado com conta nova (registro do zero → confirmação de email → primeira compra) — funcionou perfeitamente.**
+
+---
+
+## Sessão 04/07/2026 (cont.) — UX: retomar compra após cadastro/login + onboarding único + log de buscas
+
+### Problema identificado depois do teste com conta nova
+Fluxo original: visitante clica "Comprar" → manda pro cadastro → confirma email → precisa navegar de novo até o produto e clicar em "Comprar" outra vez. Fricção desnecessária, e still show "Your dashboard is empty" logo após confirmar (assustador pra quem só quer pagar).
+
+### 1. Retomada automática da compra
+- `ProductDetail.jsx` (`handleBuy`): quando não logado, guarda `product.id` em `localStorage` (`uffi_pending_buy`) antes de navegar.
+- `UserDashboard.jsx`: no mount, checa esse `localStorage`; se existir, redireciona direto pra `/products/{id}?autobuy=1` (mesmo padrão já usado pro `?tab=settings`).
+- `ProductDetail.jsx`: novo efeito que detecta `?autobuy=1` e dispara `handleBuy()` sozinho assim que `user`+`product` estão prontos, depois limpa o parâmetro da URL.
+- Funciona tanto pra quem cadastra quanto pra quem já tinha conta e só precisou logar (a intenção fica no localStorage independente do caminho de auth).
+
+### 2. Onboarding único ("smart signup/login")
+Motivação do usuário: evitar a pessoa cair "sem querer" numa tela de login sem nunca ter se cadastrado, e simplificar o caminho mais curto possível até pagar.
+- `api/check-email.js` (novo) — serverless function que recebe um email e devolve só `{ exists: boolean }` (usa a service role key; valida formato do email antes de consultar; não expõe nenhum dado além do booleano — mitiga parcialmente risco de enumeração de emails, sem rate-limiting dedicado por ora).
+- `src/pages/BuyAuthPage.jsx` (novo, rota `/start`) — tela única com indicador de passos (email → senha/confirmação → pagamento). Primeiro só pede email; consulta `/api/check-email`; mostra dinamicamente login (se já existe conta) ou cadastro completo (se é novo). Ao carregar, se vier `?lang=xx`, muda o idioma da UI automaticamente pra esse.
+- `ProductDetail.jsx`: `handleBuy` agora manda pra `/start?lang={product.language}` em vez de `/register` — a tela de onboarding já abre no idioma do produto que a pessoa quis comprar, não no idioma "padrão" do site.
+- Traduções novas (`onboard.*`) adicionadas nos 4 idiomas (en/pt/es/it) em `src/lib/translations.js`.
+- `/login` e `/register` continuam existindo do jeito que estavam, pra quem entra por esses links diretos (ex: header) — o `/start` é só o ponto de entrada específico do fluxo de compra.
+
+### 3. Log anônimo de buscas sem resultado
+Motivação do usuário: descobrir que produtos as pessoas procuram e ainda não existem no catálogo, sem fricção nem coleta de dado pessoal (decisão explícita do usuário: só o termo, anônimo — sem capturar email).
+- `sql/2026-07-04_search_logs.sql` (novo) — tabela `search_logs` (`query`, `language`, `created_at`, sem `user_id`/email de propósito). RLS: qualquer um pode inserir (`WITH CHECK (true)`); só admin pode ler (reaproveita `is_admin_or_super()` já existente).
+- `catalogQueries.js`: nova função `logSearch(query, language)` — fire-and-forget, engole erro silenciosamente (não é crítico).
+- `HomePage.jsx`: efeito com debounce de 800ms sobre a busca já existente — só loga quando a busca **não encontra nenhum produto** e tem 2+ caracteres. Nenhuma mudança visual, é 100% silencioso.
+
+### ⏳ Pendente
+- Rodar a migration `sql/2026-07-04_search_logs.sql` no Supabase.
+- Não existe (ainda) uma tela de admin pra visualizar os termos buscados sem resultado — os dados ficam só na tabela por enquanto; vale construir uma visualização no Admin numa sessão futura, se fizer sentido.
+- Lint automatizado (`eslint`) seguiu travando neste ambiente (mesmo problema de kernel já documentado) — verificação feita via parser do Babel direto (checagem de sintaxe, não de regras de lint) em todos os arquivos tocados; todos passaram limpos.

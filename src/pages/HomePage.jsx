@@ -6,7 +6,7 @@ import { Play } from 'lucide-react';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import Logo from '@/components/uffi/Logo';
-import { fetchAllProducts } from '@/lib/catalogQueries';
+import { fetchAllProducts, logSearch } from '@/lib/catalogQueries';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function HomePage({ user }) {
@@ -60,6 +60,19 @@ export default function HomePage({ user }) {
       return true;
     });
   }, [products, searchQuery, language, showAllProducts]);
+
+  // Silently logs searches that match nothing — signal for products people
+  // want that we don't sell yet. Anonymous, debounced, best-effort.
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) return;
+    const timer = setTimeout(() => {
+      if (filteredProducts.length === 0) {
+        logSearch(query, language);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [searchQuery, filteredProducts.length, language]);
 
   const getLanguageFlag = (lang) => {
     if (!lang) return '🌐';

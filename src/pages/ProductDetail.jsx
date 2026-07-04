@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 export default function ProductDetail({ user }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { language, t } = useLanguage();
 
@@ -80,7 +81,12 @@ export default function ProductDetail({ user }) {
   };
 
   const handleBuy = () => {
-    if (!user) { navigate('/register'); return; }
+    if (!user) {
+      localStorage.setItem('uffi_pending_buy', product.id);
+      const lang = product.language ? `?lang=${product.language}` : '';
+      navigate(`/start${lang}`);
+      return;
+    }
     const link = product.stripe_link || product.stripe_payment_link;
     if (!link) { toast({ title: t('toast.error'), description: 'Payment link not configured yet.', variant: 'destructive' }); return; }
     const url = new URL(link);
@@ -88,6 +94,18 @@ export default function ProductDetail({ user }) {
     url.searchParams.set('prefilled_email', user.email);
     window.open(url.toString(), '_blank');
   };
+
+  // Resumes a purchase started before login/registration (see handleBuy above
+  // and UserDashboard's pending-buy redirect) once the user and product are
+  // both loaded.
+  useEffect(() => {
+    if (user && product && searchParams.get('autobuy') === '1') {
+      searchParams.delete('autobuy');
+      setSearchParams(searchParams, { replace: true });
+      handleBuy();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, product]);
 
   const handleFreeAccess = async () => {
     if (!user) { navigate('/register'); return; }
