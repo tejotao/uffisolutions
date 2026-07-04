@@ -1260,3 +1260,53 @@ Ao investigar onde conectar o Stripe, descoberto que **`ProductDetail.jsx` (rota
 - Usuário ainda precisa: (1) pegar `STRIPE_SECRET_KEY` no dashboard do Stripe, (2) criar o webhook endpoint no Stripe apontando pra URL do deploy + evento `checkout.session.completed` (gera o `STRIPE_WEBHOOK_SECRET`), (3) pegar `SUPABASE_SERVICE_ROLE_KEY` no Supabase, (4) colar as 3 nas env vars do Vercel (e `.env.local` se for testar local), (5) rodar a migration no Supabase.
 - Teste ponta a ponta em modo teste do Stripe ainda não feito (depende dos passos acima + deploy — `/api` não roda no `vite dev` local, só depois de deployado ou via `vercel dev`).
 - Reembolso/estorno não tratado (não revoga acesso automaticamente) — não pedido nesta rodada.
+
+### Sessão 04/07/2026 (cont.) — Deploy do webhook + descoberta de dois projetos Vercel duplicados
+
+**Commit/push:** o repositório local desta pasta estava com o mesmo travamento de baixo nível já documentado (git preso em `mmap()`/`read()` do kernel — `git fetch` travou 2min+, sem uso de CPU real). Contornado de novo clonando o repo limpo numa pasta temporária, copiando os arquivos alterados pra lá, e commitando/pushando de lá (commit `366f24f`, mensagem "feat: Stripe webhook auto-releases product access after payment"). Aproveitado pra também subir `engines.node` de `20.x` pra `22.x` no `package.json` (Vercel avisou depreciação do Node 20 a partir de 01/10/2026).
+
+**Descoberta crítica: dois projetos Vercel diferentes conectados ao mesmo repo `tejotao/uffisolutions`, branch `main`:**
+- **`uffisolutions`** (`uffisolutions.vercel.app`) — criado por `tejotao`. Depois do push, a função `/api/stripe-webhook` chegou a ficar no ar mas crashava com `FUNCTION_INVOCATION_FAILED` (500) em toda requisição — sintoma de env var faltando/errada nesse projeto especificamente (provavelmente `VITE_SUPABASE_URL` ou a `SUPABASE_SERVICE_ROLE_KEY`, quebrando o `createClient()` logo na inicialização do módulo). Não foi depurado a fundo — decidido descontinuar esse projeto em vez de consertar.
+- **`uffisolutions-c549`** (`www.uffisolutions.com`, domínio de marca real) — criado por `uffisphere`. Já ficou 100% funcional depois do push: testado via `curl` direto (`GET` → 405, `POST` sem assinatura → `400 Webhook Error: No stripe-signature header value was provided.`, exatamente o comportamento esperado do código).
+
+**Decisão do usuário: `uffisolutions-c549`/`www.uffisolutions.com` é o projeto oficial de produção.** Ações tomadas:
+- Webhook do Stripe (sandbox) reapontado de `uffisolutions.vercel.app` pra `www.uffisolutions.com/api/stripe-webhook` (mesmo endpoint, só trocada a URL — o signing secret não muda ao editar a URL de um destino existente).
+- Git **desconectado** do projeto `uffisolutions` (Project Settings → Git → Disconnect) — ele para de receber deploy automático a cada push, mas **não foi apagado** (domínio/deployments antigos continuam no ar do jeito que estavam, caso algo externo ainda dependa deles — ex: redirect URLs do Supabase Auth, links antigos de email). Decisão consciente de não deletar ainda, por ser irreversível; reavaliar depois de um tempo sem problemas.
+
+**Diagnóstico adicionado ao webhook** (`api/stripe-webhook.js`): logs explícitos (`console.log`/`console.error`) do `client_reference_id` recebido e do resultado do upsert em `user_product_access`, incluindo aviso específico quando o upsert afeta 0 linhas sem lançar erro — sintoma clássico de RLS bloqueando silenciosamente por causa de uma service role key ausente/errada (mesmo padrão de bug já visto na feature de bloqueio de usuário).
+
+### ⏳ Ainda pendente (na época)
+- Investigar (opcional, sem pressa) por que `uffisolutions.vercel.app` crashava — só relevante se decidirem reviver esse projeto no futuro.
+- Confirmar que nada depende do domínio `uffisolutions.vercel.app` antes de considerar apagar o projeto de vez (checar Supabase Auth redirect URLs, `EMAIL_TEMPLATES.html`, links de marketing antigos).
+
+---
+
+## Sessão 04/07/2026 (cont.) — Stripe: ✅ ponta a ponta funcionando (3 bugs encontrados e corrigidos)
+
+**Resultado final: testado e confirmado em produção (`www.uffisolutions.com`)** — compra real no sandbox do Stripe → webhook → linha criada em `user_product_access` com `user_id`/`product_id` corretos, `granted_by: NULL` (grant automático, não manual) — produto aparece desbloqueado no Dashboard do comprador.
+
+O caminho até aqui exigiu depurar **3 bugs em cadeia**, cada um mascarando o próximo (cada correção revelava um novo erro diferente na tentativa seguinte):
+
+### Bug 1 — `client_reference_id` descartado silenciosamente pelo Stripe
+`ProductDetail.jsx` montava `client_reference_id` como `${user.id}:${product.id}` (dois-pontos como separador). Stripe só aceita `client_reference_id` com caracteres alfanuméricos, hífen ou underscore — **qualquer outro caractere faz o valor inteiro ser descartado, sem erro nenhum** (nem no Stripe, nem no navegador). O webhook sempre recebia `client_reference_id: null` e rejeitava com 400 "Missing client_reference_id". Não era cache do navegador (testado em aba anônima e no Safari, mesmo resultado) — só foi descoberto ao pesquisar a documentação oficial do Stripe sobre URL parameters de Payment Links.
+**Correção:** separador trocado pra underscore (`${user.id}_${product.id}`) em `ProductDetail.jsx` e no parser do webhook (`api/stripe-webhook.js`, `.split('_')` em vez de `.split(':')`). Seguro porque UUIDs nunca contêm underscore, só hífen.
+
+### Bug 2 — Migration nunca rodada no banco real
+Depois do bug 1 corrigido, o webhook passou a receber `client_reference_id` certo, mas começou a dar **500** com `code: '42703', message: 'column products.access_duration_days does not exist'`. A migration `sql/2026-07-04_stripe_access_release.sql` (criada na sessão anterior) nunca tinha sido executada no SQL Editor do Supabase — só existia como arquivo no repo.
+**Correção:** usuário rodou o `ALTER TABLE products ADD COLUMN IF NOT EXISTS access_duration_days INTEGER;` direto no SQL Editor.
+
+### Bug 3 — Chave errada no Vercel (a suspeita original, confirmada por último)
+Com as duas primeiras causas corrigidas, sobrou um terceiro erro: `code: '42501', message: 'new row violates row-level security policy for table "user_product_access"'`. Isso só acontece quando a role usada **não é** `service_role` — porque `service_role` sempre ignora RLS por definição, sem exceção. A variável `SUPABASE_SERVICE_ROLE_KEY` no Vercel (`uffisolutions-c549`) estava com o valor errado (provável troca com a chave `anon`, que fica visualmente ao lado no painel do Supabase).
+**Correção:** usuário recopiou a chave certa (rótulo "service_role", não "anon") do Supabase → Project Settings → API, colou de novo na env var, redeploy.
+
+### Metodologia que funcionou bem pra esse tipo de debug
+Verificação direta e independente do relato do usuário, em vez de só confiar em "não funcionou":
+- `curl` direto no endpoint publicado pra confirmar comportamento real (405/400/500) sem depender de cache do navegador do usuário.
+- Download do bundle JS publicado (`curl` + `grep`) pra confirmar que o código de fato mudou no ar, antes de suspeitar de outras causas.
+- Pedir o JSON bruto do evento no Stripe (Workbench → Events → `checkout.session.completed` → Event data) em vez de confiar só no status "Succeeded/Failed" — foi ali que apareceu `client_reference_id: null`, a pista decisiva do bug 1.
+- Pedir o log completo do Vercel (`console.error` com o objeto de erro do Postgres, incluindo `code`) em vez de só o texto genérico da resposta do webhook — os códigos `42703` e `42501` identificaram os bugs 2 e 3 na hora, sem chute.
+
+### Pendente
+- Testar com uma conta nova (registro do zero, primeiro login, primeira compra) — em andamento pelo usuário no momento em que essa nota foi escrita.
+- Preço divergente num produto de teste (mostra "£7" no catálogo do site, mas o Payment Link do Stripe cobra "£1") — resíduo de teste, ajustar quando for organizar o catálogo de verdade, não é bug.
+- Migrar pra chaves **live** do Stripe (hoje só testado em sandbox/test mode) quando for pra produção de verdade — precisa de um webhook novo em modo live (ambiente separado do sandbox).
