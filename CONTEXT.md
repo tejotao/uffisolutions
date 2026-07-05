@@ -1447,3 +1447,25 @@ Motivação do usuário: vão cadastrar vários produtos gratuitos, e querem ver
 ### ⏳ Pendente
 - Testar manualmente na URL de preview da `staging`: criar categoria nova e confirmar nome certo no site; trocar idioma/senha no perfil; ver notificação aparecer após compra de teste; testar paginação; testar reembolso de uma compra sandbox; confirmar que produto inativo some da vitrine mas continua na Biblioteca de quem já comprou.
 - Depois de validado, fundir `staging` → `main`.
+
+---
+
+## Sessão 05/07/2026 (cont.) — Sistema de suporte/feedback (tickets)
+
+**Motivação:** usuário pediu um jeito simples de registrar chamados de suporte/feedback dos clientes, centralizado, com o admin conseguindo visualizar agrupado por status — mas **sem virar um chat ao vivo**: a conversa de verdade sempre continua por email, o sistema só existe pra dar um ID de referência e manter um registro central.
+
+**Decisões confirmadas com o usuário antes de implementar:**
+- Email via `mailto:` (abre o cliente de email do próprio usuário, já preenchido) — sem integrar serviço de envio novo (Resend etc.), mesmo padrão já usado no "Give feedback" da Biblioteca.
+- Agrupamento no Admin por status (Aberto / Resolvido).
+
+### O que foi implementado
+- **Migration** `sql/2026-07-05_support_tickets.sql` — tabela `support_tickets` (`type`: support/feedback, `status`: open/resolved, `resolved_at`/`resolved_by`), RLS: usuário cria/lê só os próprios; admin lê/atualiza todos (reaproveita `is_admin_or_super()`).
+- **`src/lib/supportQueries.js`** (novo) — CRUD completo (`createTicket`, `getMyTickets`, `getAllTickets` com join manual pro nome/email do usuário, `resolveTicket`, `reopenTicket`).
+- **`SupportModal.jsx`** (novo, self-service) — escolhe tipo (Support/Feedback), assunto, mensagem. Ao enviar: grava o ticket, gera uma referência curta (8 primeiros caracteres do UUID), e abre o `mailto:` com assunto `[Ticket #REF] ...` já preenchido.
+- **Ponto de entrada**: ícone de suporte no `Header.jsx` (desktop + mobile) e na topbar do `UserDashboard.jsx`, ao lado do sino de notificações.
+- **`AdminSupport.jsx`** (novo, rota `/admin/support`, item novo no menu "Users & Access" do `AdminLayout.jsx`) — lista os tickets agrupados em Aberto/Resolvido, com botão "Reply" (mailto pré-preenchido com a referência) e Marcar Resolvido/Reabrir.
+- Nova permissão `support: ['read', 'update']` pra super_admin/admin/moderator em `rolePermissions.js`.
+
+### ⏳ Pendente
+- Testar na `staging`: abrir um chamado como usuário comum, confirmar que o cliente de email abre com o assunto certo, e que aparece no Admin → Support.
+- Rodar a migration `sql/2026-07-05_support_tickets.sql` no Supabase.
