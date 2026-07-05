@@ -1,6 +1,7 @@
 # PRD — UffiSolutions Knowledge Platform
 **Versão:** 1.0  
 **Data:** 30 Junho 2026  
+<!-- staging branch marker: 2026-07-05 — first isolated Preview deploy -->  
 **Autor:** UffiSolutions  
 **Status:** Living Document (actualizado conforme o produto evolui)
 
