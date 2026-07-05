@@ -7,6 +7,7 @@ import {
   Lock, ChevronRight, Eye, Loader2, Image, Music,
 } from 'lucide-react';
 import { fetchAllProductsAllLanguages, fetchAllCategories, createProduct, updateProduct, deleteProduct } from '@/lib/catalogQueries';
+import { getProductAccessCounts } from '@/lib/accessQueries';
 import { getDeliverablesForProduct, getDeliverablesForProducts, replaceProductDeliverables, DELIVERABLE_PROVIDERS } from '@/lib/deliverableQueries';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -76,6 +77,7 @@ export default function AdminProducts({ user }) {
   const [activeTab, setActiveTab]     = useState('public'); // 'public' | 'content'
   const [deliverablesMap, setDeliverablesMap] = useState(new Map()); // productId -> deliverable[]
   const [loadingDeliverables, setLoadingDeliverables] = useState(false);
+  const [accessCounts, setAccessCounts] = useState(new Map()); // productId -> { active, total }
 
   const [formData, setFormData] = useState({
     // ── Tab 1: Public ──
@@ -100,12 +102,14 @@ export default function AdminProducts({ user }) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [prods, cats] = await Promise.all([
+      const [prods, cats, counts] = await Promise.all([
         fetchAllProductsAllLanguages(),
         fetchAllCategories('all'),
+        getProductAccessCounts(),
       ]);
       setProducts(prods || []);
       setCategories(cats || []);
+      setAccessCounts(counts);
       const map = await getDeliverablesForProducts((prods || []).map((p) => p.id));
       setDeliverablesMap(map);
     } catch {
@@ -343,16 +347,17 @@ export default function AdminProducts({ user }) {
                   <th className="px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Lang</th>
                   <th className="px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center hidden sm:table-cell">Type</th>
                   <th className="px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Status</th>
+                  <th className="px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center" title="Users with active access / total ever granted">Owners</th>
                   <th className="px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan="7" className="py-16 text-center text-zinc-600">
+                  <tr><td colSpan="8" className="py-16 text-center text-zinc-600">
                     <Loader2 size={24} className="animate-spin mx-auto mb-2" /> Loading products...
                   </td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan="7" className="py-16 text-center text-zinc-600">
+                  <tr><td colSpan="8" className="py-16 text-center text-zinc-600">
                     <Package size={32} className="mx-auto mb-2 opacity-20" /> No products found
                   </td></tr>
                 ) : paginated.map((product) => {
@@ -415,6 +420,21 @@ export default function AdminProducts({ user }) {
                           isActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-500/10 text-zinc-500 border-zinc-700')}>
                           {isActive ? 'Active' : 'Inactive'}
                         </span>
+                      </td>
+                      {/* Owners */}
+                      <td className="px-4 py-3 text-center">
+                        {(() => {
+                          const counts = accessCounts.get(product.id);
+                          if (!counts || counts.total === 0) {
+                            return <span className="text-zinc-700 text-xs">—</span>;
+                          }
+                          return (
+                            <span className="text-xs font-semibold text-white" title={`${counts.active} active, ${counts.total} total`}>
+                              {counts.active}
+                              {counts.total !== counts.active && <span className="text-zinc-600"> / {counts.total}</span>}
+                            </span>
+                          );
+                        })()}
                       </td>
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">

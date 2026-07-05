@@ -59,8 +59,12 @@ export default function ProductsPage({ user }) {
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
+      // Inactive products are only ever discoverable by owners (via their
+      // Library) — never shown in browsing/discovery lists.
+      if (product.active === false) return false;
+
       const pLang = (product.language || 'en').toLowerCase();
-      
+
       // Filter logic: show all if globe is active, otherwise filter by language
       if (!showAllProducts && !pLang.includes(language)) {
         return false;

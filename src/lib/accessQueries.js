@@ -157,6 +157,30 @@ export const getAllAccessSummary = async () => {
   return map;
 };
 
+/**
+ * Load ALL access rows in one shot, aggregated per product — powers the
+ * "owners" column in the admin Products list. Counts both free and paid
+ * products the same way, since both grant access via this same table.
+ * Returns a Map<productId, { active: number, total: number }>
+ */
+export const getProductAccessCounts = async () => {
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('user_product_access')
+    .select('product_id, expiry_date, is_active');
+
+  if (error) { console.error('getProductAccessCounts error:', error); return new Map(); }
+
+  const map = new Map();
+  for (const row of data || []) {
+    if (!map.has(row.product_id)) map.set(row.product_id, { active: 0, total: 0 });
+    const entry = map.get(row.product_id);
+    entry.total++;
+    if (row.is_active && (row.expiry_date === null || row.expiry_date >= today)) entry.active++;
+  }
+  return map;
+};
+
 // ─── User-side queries ────────────────────────────────────────────────────────
 
 /**

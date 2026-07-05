@@ -164,6 +164,29 @@ export default function ProductDetail({ user }) {
     );
   }
 
+  // Inactive products stay reachable for people who already own them (so
+  // they can still find their way to the Library), but are otherwise treated
+  // as unavailable — never a route to a fresh purchase.
+  if (product.active === false && !hasAccess) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
+        <Header user={user} isAdminPage={false} />
+        <div className="flex-grow flex flex-col items-center justify-center p-6 text-center">
+          <AlertCircle size={64} className="text-red-500 mb-6" />
+          <h1 className="text-3xl font-black mb-4">{t('detail.unavailable')}</h1>
+          <p className="text-gray-400 mb-8">{t('detail.unavailable_desc')}</p>
+          <button
+            onClick={() => navigate('/products')}
+            className="flex items-center gap-2 bg-[#f59e0b] text-black px-6 py-3 rounded-xl font-bold hover:bg-[#d97706] transition-colors"
+          >
+            <ArrowLeft size={20} /> {t('detail.back_catalog')}
+          </button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   const isFree = product.is_free || parseFloat(product.price) === 0 || !product.price;
 
   return (
