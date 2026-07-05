@@ -973,6 +973,8 @@ CREATE TABLE IF NOT EXISTS public.product_deliverables (
 ✅ SQL executado — tabela product_deliverables criada + dados migrados
 ✅ Password Reset — /reset-password testado ponta a ponta (email → link → nova senha → login) em 01/07/2026
 ✅ User Block/Unblock — testado ponta a ponta (admin bloqueia → badge vermelha → login da conta bloqueada → tela "Account blocked" → unblock → acesso normal) em 01/07/2026
+✅ Stripe checkout → webhook → acesso automático — testado ponta a ponta em sandbox E em produção (compra real, cartão real) em 04-05/07/2026
+✅ Ambientes separados — branch `staging` (Preview, chaves de teste) isolada da `main` (Production, chaves live) na Vercel, com Protection Bypass configurado
 ```
 
 ---
@@ -1341,6 +1343,49 @@ Motivação do usuário: descobrir que produtos as pessoas procuram e ainda não
 - `HomePage.jsx`: efeito com debounce de 800ms sobre a busca já existente — só loga quando a busca **não encontra nenhum produto** e tem 2+ caracteres. Nenhuma mudança visual, é 100% silencioso.
 
 ### ⏳ Pendente
-- Rodar a migration `sql/2026-07-04_search_logs.sql` no Supabase.
 - Não existe (ainda) uma tela de admin pra visualizar os termos buscados sem resultado — os dados ficam só na tabela por enquanto; vale construir uma visualização no Admin numa sessão futura, se fizer sentido.
 - Lint automatizado (`eslint`) seguiu travando neste ambiente (mesmo problema de kernel já documentado) — verificação feita via parser do Babel direto (checagem de sintaxe, não de regras de lint) em todos os arquivos tocados; todos passaram limpos.
+
+**✅ Migration `search_logs` rodada no Supabase, testado.**
+
+---
+
+## Sessão 04-05/07/2026 (cont.) — Separação Production/Staging + Stripe modo Live validado
+
+**Motivação:** até aqui, todo push pra `main` ia direto pro site ao vivo (`www.uffisolutions.com`) — sem espaço pra testar mudanças com segurança antes de publicar de verdade. Pedido do usuário: um ambiente de teste/manutenção separado, e depois "promover" pro live só quando aprovado.
+
+### Arquitetura escolhida: branches + ambientes nativos da Vercel (não dois projetos)
+Já tínhamos aprendido da forma difícil (sessão anterior, dois projetos Vercel duplicados) que **não vale duplicar projeto** pra isso. A solução correta, um projeto só (`uffisolutions-c549`):
+
+- **Branch `main`** → ambiente **Production** da Vercel → domínio `www.uffisolutions.com` → chaves **live** do Stripe.
+- **Branch `staging`** (nova, criada nesta sessão) → cai automaticamente em **Preview** (Vercel: "Preview = todas as branches não atribuídas", não precisou configurar nada extra) → URL própria: `https://uffisolutions-c549-git-staging-hubukbox-s-projects.vercel.app` → chaves de **teste/sandbox** do Stripe.
+- **Fluxo de trabalho**: mudanças entram primeiro na `staging` → testa na URL de preview → aprovado → `merge` `staging` → `main` → vai pro ar de verdade.
+
+### Variáveis de ambiente separadas por ambiente
+Na Vercel, `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` viraram **duas entradas cada**, mesmo nome, escopos diferentes:
+- Uma marcada só **"Production"**, com os valores **live** (`sk_live_...`, `whsec_...` do webhook live).
+- Uma marcada só **"Preview"**, com os valores **test/sandbox** (`sk_test_...`, `whsec_...` do webhook de teste).
+
+`SUPABASE_SERVICE_ROLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` continuam **compartilhadas** entre os dois ambientes — é o mesmo banco de dados Supabase nos dois casos (não existe "Supabase de teste" separado, só o Stripe tem ambientes distintos). **Nota de atenção**: como o banco é compartilhado, compras de teste feitas na `staging` gravam no banco de dados real (só não geram cobrança real, já que usam o Stripe sandbox) — aceito como trade-off, não configurado banco isolado pra staging por ora.
+
+**Erro cometido e corrigido durante a configuração**: colou-se por engano a `Publishable key` (`pk_live_...`) no lugar da `Secret key` (`sk_live_...`) na entrada "Production" do `STRIPE_SECRET_KEY` — são duas chaves diferentes mostradas lado a lado no Stripe, fácil de confundir. Corrigido buscando a chave certa ("Secret key", não "Publishable key") no Stripe em modo Live.
+
+### Deployment Protection da Preview e o Protection Bypass
+A URL de Preview vem, por padrão, protegida por **Vercel Authentication** (só quem está logado no time consegue visualizar) — bom pra visitantes aleatórios, mas isso **bloqueia o webhook do Stripe** (chamada servidor-a-servidor, sem login). Resolvido com a opção gratuita da Vercel (**não** a "Password Protection", que é paga — $150/mês no plano Pro):
+- Vercel → Project Settings → Deployment Protection → **"Protection Bypass for Automation"** → gerado um secret.
+- O webhook de **teste** no Stripe (destino "empowering-rhythm") foi reapontado da URL antiga (`www.uffisolutions.com`) pra URL de preview, com o secret anexado: `{preview-url}/api/stripe-webhook?x-vercel-protection-bypass={secret}`.
+
+### Webhook em modo Live criado
+Webhooks Live e Test são objetos completamente separados no Stripe (não compartilham nada, cada um com seu próprio signing secret). Criado um destino novo em modo **Live**, apontando pra `www.uffisolutions.com/api/stripe-webhook` (sem parâmetro de bypass — produção não tem Deployment Protection ativada), evento `checkout.session.completed`. O signing secret gerado foi colado na entrada "Production" do `STRIPE_WEBHOOK_SECRET`, e um redeploy manual disparado pra produção pegar o valor novo (salvar env var na Vercel não redeploya sozinho).
+
+### ✅ Testado e confirmado nos dois ambientes
+- **Staging/Preview**: compra de teste completa (cartão `4242...`, através da URL de preview com o bypass token) → acesso liberado em `user_product_access`.
+- **Production/Live**: produto novo criado no Stripe em modo Live (Payment Link real) → colado no Admin do site → **compra real, com cartão real** → acesso liberado automaticamente, confirmado no Supabase.
+
+### Memória salva (fora do código)
+Adicionada uma memória de referência (`staging_preview_environment`) com a URL de preview, o mecanismo do Protection Bypass, e a lógica de separação de env vars — pra não precisar redescobrir isso numa sessão futura.
+
+### ⏳ Pendente
+- Preço divergente do produto de teste sandbox (£7 no catálogo vs £1 no Payment Link) — ajustar quando organizar o catálogo de verdade.
+- Reembolso/estorno do Stripe ainda não revoga acesso automaticamente (não pedido até agora).
+- Considerar (sem pressa) apagar de vez o projeto Vercel `uffisolutions` antigo (hoje só desconectado do Git) — só depois de confirmar que nada externo depende do domínio `uffisolutions.vercel.app`.
