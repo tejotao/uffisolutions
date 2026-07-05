@@ -179,7 +179,14 @@ export const fetchAllCategories = async (language = 'pt') => {
 
     return (data || []).map(cat => {
       const trans = cat.category_translations?.find(t => t.language === language) || cat.category_translations?.[0] || {};
-      const derivedName = trans.name || (cat.slug ? cat.slug.charAt(0).toUpperCase() + cat.slug.slice(1) : 'Outros');
+      const derivedName = trans.name || (cat.slug ? cat.slug.charAt(0).toUpperCase() + cat.slug.slice(1) : 'Other');
+      // Per-language names, read from category_translations (the real source of
+      // truth for display) rather than the legacy flat columns on `categories` —
+      // used by the admin CRUD modal to prefill the edit form correctly.
+      const byLang = { en: '', pt: '', it: '', es: '' };
+      (cat.category_translations || []).forEach(t => {
+        if (t.language in byLang) byLang[t.language] = t.name || '';
+      });
       return {
         id: cat.id,
         slug: cat.slug,
@@ -189,12 +196,11 @@ export const fetchAllCategories = async (language = 'pt') => {
         description: trans.description || '',
         active: cat.active,
         is_active: cat.active,
-        // Flat per-language name/description columns, used by the admin CRUD modal only
-        name_en: cat.name || '',
-        name_pt: cat.name_pt || '',
-        name_it: cat.name_it || '',
-        name_es: cat.name_es || '',
-        description_raw: cat.description || ''
+        name_en: byLang.en,
+        name_pt: byLang.pt,
+        name_it: byLang.it,
+        name_es: byLang.es,
+        description_raw: trans.description || ''
       };
     });
   } catch (error) {
@@ -222,7 +228,7 @@ export const fetchCategoriesForAdmin = async () => {
 
     const formatted = (data || []).map(cat => {
       const trans = cat.category_translations?.[0] || {};
-      const derivedName = trans.name || (cat.slug ? cat.slug.charAt(0).toUpperCase() + cat.slug.slice(1) : 'Outros');
+      const derivedName = trans.name || (cat.slug ? cat.slug.charAt(0).toUpperCase() + cat.slug.slice(1) : 'Other');
       return {
         id: cat.id,
         slug: cat.slug,
@@ -271,6 +277,24 @@ export const updateCategory = async (id, categoryData) => {
     console.error('updateCategory error:', error);
     return { data: null, error };
   }
+};
+
+// Every public-facing read (fetchAllCategories, catalogue filters, product
+// forms) derives the displayed category name from this table, not from the
+// flat name/name_pt/name_it/name_es columns on `categories` — those only
+// exist for the admin form and are otherwise unused for display.
+export const upsertCategoryTranslations = async (categoryId, names, description) => {
+  const rows = ['en', 'pt', 'it', 'es'].map((language) => ({
+    category_id: categoryId,
+    language,
+    name: names[language] || '',
+    description: description || '',
+  }));
+  const { error } = await supabase
+    .from('category_translations')
+    .upsert(rows, { onConflict: 'category_id,language' });
+  if (error) console.error('upsertCategoryTranslations error:', error);
+  return { error };
 };
 
 export const deleteCategory = async (id) => {

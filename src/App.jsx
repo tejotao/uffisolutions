@@ -19,6 +19,7 @@ import AdminProducts from '@/pages/admin/AdminProducts';
 import AdminCategories from '@/pages/admin/AdminCategories';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AccessBoard from '@/pages/admin/AccessBoard';
+import NotificationsPage from '@/pages/NotificationsPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import BuyAuthPage from '@/pages/BuyAuthPage';
@@ -112,6 +113,9 @@ function App() {
           } />
           <Route path="/library/:productId" element={
             <ProtectedRoute user={user}><LibraryPage user={user} /></ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute user={user}><NotificationsPage user={user} /></ProtectedRoute>
           } />
 
           <Route path="/admin"              element={<AdminRoute user={user}><AdminDashboard user={user} /></AdminRoute>} />

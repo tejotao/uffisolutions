@@ -404,6 +404,8 @@ export default function AdminUsers({ user }) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter]   = useState('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [expandedId, setExpandedId]   = useState(null);
   const [grantTarget, setGrantTarget] = useState(null);
   const [profileTarget, setProfileTarget] = useState(null);
@@ -532,6 +534,14 @@ export default function AdminUsers({ user }) {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, roleFilter]);
+
   return (
     <AdminLayout user={user}>
       <div className="px-6 py-8 max-w-5xl mx-auto">
@@ -587,7 +597,7 @@ export default function AdminUsers({ user }) {
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map((u) => {
+            {paginated.map((u) => {
               const info       = summary.get(u.id) || { active: 0, total: 0, productIds: [] };
               const isExpanded = expandedId === u.id;
               const expired    = info.total - info.active;
@@ -690,6 +700,28 @@ export default function AdminUsers({ user }) {
                 </motion.div>
               );
             })}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 text-sm text-zinc-500">
+            <span>Page {currentPage} of {totalPages}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

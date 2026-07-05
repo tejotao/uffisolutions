@@ -2,27 +2,27 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '@/contexts/I18nContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const getTimeAgo = (dateStr, t) => {
   const date = new Date(dateStr);
   const now = new Date();
   const diffInSeconds = Math.floor((now - date) / 1000);
-  
-  if (diffInSeconds < 60) return t('notifications.time.now') || 'agora mesmo';
-  
+
+  if (diffInSeconds < 60) return t('notifications.time_now');
+
   const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) return `${t('notifications.time.ago') || 'há'} ${diffInMinutes} ${t('notifications.time.min') || 'min'}`;
-  
+  if (diffInMinutes < 60) return `${t('notifications.time_ago')} ${diffInMinutes} ${t('notifications.time_min')}`;
+
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${t('notifications.time.ago') || 'há'} ${diffInHours} ${t('notifications.time.hours') || 'horas'}`;
-  
+  if (diffInHours < 24) return `${t('notifications.time_ago')} ${diffInHours} ${t('notifications.time_hours')}`;
+
   const diffInDays = Math.floor(diffInHours / 24);
-  return `${t('notifications.time.ago') || 'há'} ${diffInDays} ${t('notifications.time.days') || 'dias'}`;
+  return `${t('notifications.time_ago')} ${diffInDays} ${t('notifications.time_days')}`;
 };
 
 const NotificationItem = ({ notification, onMarkAsRead, onDelete, onCloseDropdown }) => {
-  const { t } = useI18n();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -62,18 +62,18 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onCloseDropdow
 
       <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         {!notification.read && (
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); onMarkAsRead(notification.id); }}
             className="text-gray-400 hover:text-green-500 transition-colors"
-            title={t('notifications.markRead') || 'Marcar como lida'}
+            title={t('notifications.mark_read')}
           >
             <Check size={16} />
           </button>
         )}
-        <button 
+        <button
           onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }}
           className="text-gray-400 hover:text-red-500 transition-colors"
-          title={t('notifications.delete') || 'Apagar'}
+          title={t('notifications.delete')}
         >
           <X size={16} />
         </button>

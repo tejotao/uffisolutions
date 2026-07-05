@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { resolveDeliverables } from '@/components/uffi/AccessModal';
 import ProfileModal from '@/components/uffi/ProfileModal';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { getUserRole, ROLES } from '@/lib/rolePermissions';
 import Footer from '@/components/uffi/Footer';
 import Logo from '@/components/uffi/Logo';
@@ -551,6 +552,8 @@ export default function UserDashboard({ user }) {
           <button onClick={() => navigate('/products')} title="Catalog" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
             <Package size={18} />
           </button>
+
+          <NotificationBell />
 
           {/* Admin shortcut — only visible for admin/super_admin */}
           {isAdmin && (

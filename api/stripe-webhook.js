@@ -22,6 +22,39 @@ function addDays(days) {
   return date.toISOString().split('T')[0];
 }
 
+// A refund only gives us the Charge/PaymentIntent — client_reference_id lives
+// on the Checkout Session, so we look the session back up via the Stripe API
+// rather than needing a new column/migration to link purchases back to users.
+async function handleRefund(charge) {
+  try {
+    const sessions = await stripe.checkout.sessions.list({ payment_intent: charge.payment_intent, limit: 1 });
+    const session = sessions.data[0];
+    if (!session) {
+      console.error('charge.refunded: no Checkout Session found for payment_intent', charge.payment_intent);
+      return;
+    }
+
+    const [userId, productId] = (session.client_reference_id || '').split('_');
+    if (!userId || !productId) {
+      console.error('charge.refunded: missing/malformed client_reference_id on session', session.id);
+      return;
+    }
+
+    const { error: revokeError } = await supabase
+      .from('user_product_access')
+      .delete()
+      .eq('user_id', userId)
+      .eq('product_id', productId);
+    if (revokeError) throw revokeError;
+
+    await supabase.from('purchases').update({ status: 'refunded' }).eq('stripe_session', session.id);
+
+    console.log('charge.refunded: access revoked', { userId, productId, sessionId: session.id });
+  } catch (err) {
+    console.error('Failed to process refund for charge', charge.id, err);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).end('Method Not Allowed');
@@ -35,6 +68,12 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('Stripe signature verification failed:', err.message);
     res.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+
+  if (event.type === 'charge.refunded') {
+    await handleRefund(event.data.object);
+    res.status(200).json({ received: true });
     return;
   }
 
@@ -56,7 +95,7 @@ export default async function handler(req, res) {
   try {
     const { data: product, error: productError } = await supabase
       .from('products')
-      .select('access_duration_days, language')
+      .select('access_duration_days, language, name, title')
       .eq('id', productId)
       .single();
     if (productError) throw productError;
@@ -88,6 +127,20 @@ export default async function handler(req, res) {
       console.error('user_product_access upsert affected 0 rows — check SUPABASE_SERVICE_ROLE_KEY in Vercel env vars', { userId, productId, sessionId: session.id });
     } else {
       console.log('user_product_access upserted successfully', accessRows[0]);
+      try {
+        const productName = product?.title || product?.name || 'your product';
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          title: 'Purchase confirmed',
+          description: `Your purchase of "${productName}" is ready — access unlocked!`,
+          type: 'purchase',
+          icon: '🎉',
+          action_url: `/products/${productId}`,
+          read: false,
+        });
+      } catch (notifyError) {
+        console.error('notification insert failed (non-blocking):', notifyError);
+      }
     }
 
     try {

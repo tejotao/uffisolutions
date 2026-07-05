@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Loader2, CheckCircle } from 'lucide-react';
+import { X, Loader2, CheckCircle, Lock } from 'lucide-react';
 import { updateUser } from '@/lib/catalogQueries';
+import { updatePassword } from '@/lib/supabaseAuth';
 import { useToast } from '@/hooks/use-toast';
 import { getInitials } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const CONTACT_OPTIONS = [
   { value: 'email', label: 'Email' },
@@ -15,16 +17,22 @@ const CONTACT_OPTIONS = [
 
 const FIELD_KEYS = [
   'full_name', 'phone', 'whatsapp', 'contact_preference',
-  'address_street', 'address_number', 'city', 'postal_code', 'country', 'birth_date',
+  'address_street', 'address_number', 'city', 'postal_code', 'country', 'birth_date', 'language',
 ];
 
-const emptyForm = () => FIELD_KEYS.reduce((acc, key) => ({ ...acc, [key]: key === 'contact_preference' ? 'email' : '' }), {});
+const DEFAULTS = { contact_preference: 'email', language: 'en' };
+const emptyForm = () => FIELD_KEYS.reduce((acc, key) => ({ ...acc, [key]: DEFAULTS[key] || '' }), {});
 
 export default function ProfileModal({ user, onClose }) {
   const { toast } = useToast();
+  const { availableLanguages, changeLanguage } = useLanguage();
   const [formData, setFormData] = useState(emptyForm());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +55,7 @@ export default function ProfileModal({ user, onClose }) {
           postal_code: data.postal_code || '',
           country: data.country || '',
           birth_date: data.birth_date || '',
+          language: data.language || 'en',
         });
       }
       setLoading(false);
@@ -63,16 +72,40 @@ export default function ProfileModal({ user, onClose }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...formData };
+      const payload = { ...formData, preferred_language: formData.language };
       Object.keys(payload).forEach((key) => { if (payload[key] === '') payload[key] = null; });
       const { error } = await updateUser(user.id, payload);
       if (error) throw error;
+      changeLanguage(formData.language);
       toast({ title: 'Profile updated', className: 'border-emerald-500 bg-zinc-900 text-white' });
       onClose();
     } catch {
       toast({ title: 'Error saving profile', variant: 'destructive' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast({ title: 'Password must be at least 6 characters.', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Passwords do not match.', variant: 'destructive' });
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const { success, error } = await updatePassword(newPassword);
+      if (!success) throw error;
+      toast({ title: 'Password updated', className: 'border-emerald-500 bg-zinc-900 text-white' });
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch {
+      toast({ title: 'Error updating password', variant: 'destructive' });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -130,14 +163,25 @@ export default function ProfileModal({ user, onClose }) {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Preferred Contact Method</label>
-                <select name="contact_preference" value={formData.contact_preference} onChange={handleChange}
-                  className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors appearance-none">
-                  {CONTACT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Preferred Contact Method</label>
+                  <select name="contact_preference" value={formData.contact_preference} onChange={handleChange}
+                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors appearance-none">
+                    {CONTACT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Language</label>
+                  <select name="language" value={formData.language} onChange={handleChange}
+                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors appearance-none">
+                    {availableLanguages.map((lang) => (
+                      <option key={lang.code} value={lang.code}>{lang.flag} {lang.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="pt-1 border-t border-[#2a2a2a]">
@@ -179,6 +223,27 @@ export default function ProfileModal({ user, onClose }) {
                   className="w-full sm:w-1/2 bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors" />
               </div>
             </form>
+          )}
+
+          {!loading && (
+            <div className="pt-5 mt-5 border-t border-[#2a2a2a]">
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <Lock size={12} /> Change Password
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New password"
+                  className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors" />
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 transition-colors" />
+              </div>
+              <button type="button" onClick={handleChangePassword} disabled={changingPassword || !newPassword}
+                className="px-5 py-2 rounded-xl font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors disabled:opacity-50 flex items-center gap-2 text-sm">
+                {changingPassword ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
+                {changingPassword ? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
           )}
         </div>
 

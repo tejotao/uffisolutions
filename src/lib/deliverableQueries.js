@@ -47,6 +47,41 @@ export const getDeliverablesForProducts = async (productIds) => {
   }
 };
 
+// ─── Per-user "seen" state ──────────────────────────────────────────────────
+
+// Returns the Set of deliverable_ids the user has already viewed, restricted
+// to the given deliverableIds (avoids fetching a user's entire view history).
+export const getViewedDeliverableIds = async (userId, deliverableIds) => {
+  const ids = [...new Set((deliverableIds || []).filter(Boolean))];
+  if (!userId || ids.length === 0) return new Set();
+  try {
+    const { data, error } = await supabase
+      .from('deliverable_views')
+      .select('deliverable_id')
+      .eq('user_id', userId)
+      .in('deliverable_id', ids);
+    if (error) throw error;
+    return new Set((data || []).map((row) => row.deliverable_id));
+  } catch (error) {
+    console.error('getViewedDeliverableIds error:', error);
+    return new Set();
+  }
+};
+
+export const markDeliverableViewed = async (userId, deliverableId) => {
+  if (!userId || !deliverableId) return { error: null };
+  try {
+    const { error } = await supabase
+      .from('deliverable_views')
+      .upsert({ user_id: userId, deliverable_id: deliverableId }, { onConflict: 'user_id,deliverable_id' });
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('markDeliverableViewed error:', error);
+    return { error };
+  }
+};
+
 // ─── Writes (admin only) ────────────────────────────────────────────────────
 
 // Replaces the full deliverable list for a product. Simplest, safest mutation

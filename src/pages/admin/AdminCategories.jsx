@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, X, Tags, Check, Search, Filter, AlertTriangle } from 'lucide-react';
-import { fetchAllCategories, createCategory, updateCategory, deleteCategory } from '@/lib/catalogQueries';
+import { fetchAllCategories, createCategory, updateCategory, deleteCategory, upsertCategoryTranslations } from '@/lib/catalogQueries';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { canAccess } from '@/lib/rolePermissions';
@@ -64,7 +64,7 @@ export default function AdminCategories({ user }) {
       const cats = await fetchAllCategories('all');
       setCategories(cats || []);
     } catch (error) {
-      toast({ title: "Erro", description: "Falha ao carregar categorias.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to load categories.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -74,19 +74,19 @@ export default function AdminCategories({ user }) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center">
         <AlertTriangle size={64} className="text-red-500 mb-4" />
-        <h1 className="text-3xl font-bold mb-2">Acesso Negado</h1>
-        <p className="text-gray-400">Você não tem permissão para visualizar categorias.</p>
+        <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
+        <p className="text-gray-400">You do not have permission to view categories.</p>
       </div>
     );
   }
 
   const handleOpenModal = (category = null) => {
     if (category && !permissions.canUpdate) {
-      toast({ title: "Acesso Negado", description: "Você não tem permissão para editar categorias.", variant: "destructive" });
+      toast({ title: "Access Denied", description: "You do not have permission to edit categories.", variant: "destructive" });
       return;
     }
     if (!category && !permissions.canCreate) {
-      toast({ title: "Acesso Negado", description: "Você não tem permissão para criar categorias.", variant: "destructive" });
+      toast({ title: "Access Denied", description: "You do not have permission to create categories.", variant: "destructive" });
       return;
     }
 
@@ -144,16 +144,16 @@ export default function AdminCategories({ user }) {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.slug) {
-      toast({ title: "Erro", description: "Nome e Slug são obrigatórios", variant: "destructive" });
+      toast({ title: "Error", description: "Name and Slug are required", variant: "destructive" });
       return;
     }
 
     if (editingId && !permissions.canUpdate) {
-      toast({ title: "Acesso Negado", description: "Você não tem permissão para editar.", variant: "destructive" });
+      toast({ title: "Access Denied", description: "You do not have permission to edit.", variant: "destructive" });
       return;
     }
     if (!editingId && !permissions.canCreate) {
-      toast({ title: "Acesso Negado", description: "Você não tem permissão para criar.", variant: "destructive" });
+      toast({ title: "Access Denied", description: "You do not have permission to create.", variant: "destructive" });
       return;
     }
 
@@ -180,11 +180,23 @@ export default function AdminCategories({ user }) {
 
       if (result.error) throw result.error;
 
-      toast({ title: "Sucesso", description: `Categoria salva com sucesso!` });
+      // The flat columns above are admin-form-only — every public display
+      // reads the name/description from category_translations, so keep it
+      // in sync here for all 4 languages (same shared description text,
+      // matching this form's single description field).
+      const categoryId = editingId || result.data.id;
+      const { error: translationsError } = await upsertCategoryTranslations(
+        categoryId,
+        { en: formData.name, pt: formData.name_pt, it: formData.name_it, es: formData.name_es },
+        formData.description
+      );
+      if (translationsError) throw translationsError;
+
+      toast({ title: "Success", description: "Category saved successfully!" });
       loadData();
       handleCloseModal();
     } catch (error) {
-      toast({ title: "Erro", description: "Falha ao salvar categoria", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save category", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -193,18 +205,18 @@ export default function AdminCategories({ user }) {
   const handleDelete = async (id, e) => {
     e.stopPropagation();
     if (!permissions.canDelete) {
-      toast({ title: "Acesso Negado", description: "Você não tem permissão para excluir categorias.", variant: "destructive" });
+      toast({ title: "Access Denied", description: "You do not have permission to delete categories.", variant: "destructive" });
       return;
     }
 
-    if (window.confirm('Tem certeza que deseja excluir esta categoria?')) {
+    if (window.confirm('Are you sure you want to delete this category?')) {
       try {
         const { error } = await deleteCategory(id);
         if (error) throw error;
-        toast({ title: "Sucesso", description: "Categoria removida." });
+        toast({ title: "Success", description: "Category removed." });
         setCategories(categories.filter(c => c.id !== id));
       } catch (error) {
-        toast({ title: "Erro", description: "Falha ao remover categoria", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to remove category", variant: "destructive" });
       }
     }
   };
@@ -223,19 +235,19 @@ export default function AdminCategories({ user }) {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 py-8 border-b border-[#2a2a2a]">
           <div>
             <h1 className="text-4xl font-black flex items-center gap-3">
-              <Tags className="text-[#f59e0b] w-10 h-10" /> 
-              Gerenciar Categorias
+              <Tags className="text-[#f59e0b] w-10 h-10" />
+              Manage Categories
             </h1>
-            <p className="text-gray-400 text-base mt-2">Crie, edite e organize a estrutura do seu catálogo</p>
+            <p className="text-gray-400 text-base mt-2">Create, edit and organise your catalogue structure</p>
           </div>
-          
+
           {permissions.canCreate && (
-            <button 
+            <button
               onClick={() => handleOpenModal()}
               className="flex items-center justify-center gap-2 bg-[#f59e0b] hover:bg-[#d97706] text-black px-6 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95"
             >
               <Plus size={20} />
-              Nova Categoria
+              New Category
             </button>
           )}
         </div>
@@ -244,15 +256,15 @@ export default function AdminCategories({ user }) {
         <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-            <input 
-              type="text" 
-              placeholder="Buscar categoria por nome..." 
+            <input
+              type="text"
+              placeholder="Search category by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl pl-12 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f59e0b] transition-colors"
             />
           </div>
-          
+
           <div className="relative">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
             <select
@@ -260,21 +272,21 @@ export default function AdminCategories({ user }) {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors appearance-none"
             >
-              <option value="all">Todos os Status</option>
-              <option value="active">Apenas Ativas</option>
-              <option value="inactive">Apenas Inativas</option>
+              <option value="all">All Statuses</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
             </select>
           </div>
         </div>
 
         <div className="mb-4 text-sm font-medium text-gray-400">
-          Mostrando <span className="text-[#f59e0b]">{filteredCategories.length}</span> categorias
+          Showing <span className="text-[#f59e0b]">{filteredCategories.length}</span> categories
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-gray-500">Carregando categorias...</div>
+          <div className="text-center py-12 text-gray-500">Loading categories...</div>
         ) : filteredCategories.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">Nenhuma categoria encontrada.</div>
+          <div className="text-center py-12 text-gray-500">No categories found.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence>
@@ -308,29 +320,29 @@ export default function AdminCategories({ user }) {
                     </div>
                     
                     <p className="text-sm text-gray-400 line-clamp-2 min-h-[40px] mb-6">
-                      {category.description || 'Sem descrição definida para esta categoria.'}
+                      {category.description || 'No description set for this category.'}
                     </p>
 
                     <div className="flex items-center justify-between pt-4 border-t border-[#2a2a2a]">
                       <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${isActive ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-gray-500/10 text-gray-400 border border-gray-600/30'}`}>
-                        {isActive ? 'Ativo' : 'Inativo'}
+                        {isActive ? 'Active' : 'Inactive'}
                       </span>
-                      
+
                       <div className="flex gap-2">
                         {permissions.canUpdate && (
-                          <button 
+                          <button
                             onClick={() => handleOpenModal(category)}
                             className="p-2.5 text-gray-400 hover:text-white bg-[#222] hover:bg-[#333] rounded-xl transition-colors"
-                            title="Editar"
+                            title="Edit"
                           >
                             <Edit2 size={18} />
                           </button>
                         )}
                         {permissions.canDelete && (
-                          <button 
+                          <button
                             onClick={(e) => handleDelete(category.id, e)}
                             className="p-2.5 text-gray-400 hover:text-red-500 bg-[#222] hover:bg-[#333] rounded-xl transition-colors"
-                            title="Excluir"
+                            title="Delete"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -364,7 +376,7 @@ export default function AdminCategories({ user }) {
               <div className="p-8 border-b border-[#2a2a2a] flex justify-between items-center bg-[#141414]">
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                   <Tags className="text-[#f59e0b] w-6 h-6" />
-                  {editingId ? 'Editar Categoria' : 'Nova Categoria'}
+                  {editingId ? 'Edit Category' : 'New Category'}
                 </h2>
                 <button onClick={handleCloseModal} className="text-gray-400 hover:text-white transition-colors">
                   <X size={28} />
@@ -376,7 +388,7 @@ export default function AdminCategories({ user }) {
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (EN) *</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Name (EN) *</label>
                       <input
                         type="text"
                         name="name"
@@ -384,7 +396,7 @@ export default function AdminCategories({ user }) {
                         value={formData.name}
                         onChange={handleNameChange}
                         className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
-                        placeholder="Ex: Digital Marketing"
+                        placeholder="E.g. Digital Marketing"
                       />
                     </div>
                     <div>
@@ -396,61 +408,61 @@ export default function AdminCategories({ user }) {
                         value={formData.slug}
                         onChange={handleInputChange}
                         className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
-                        placeholder="Gerado automaticamente do Nome (EN)"
+                        placeholder="Auto-generated from Name (EN)"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (PT-BR)</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Name (PT)</label>
                       <input
                         type="text"
                         name="name_pt"
                         value={formData.name_pt}
                         onChange={handleInputChange}
                         className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
-                        placeholder="Ex: Marketing Digital"
+                        placeholder="E.g. Marketing Digital"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (IT)</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Name (IT)</label>
                       <input
                         type="text"
                         name="name_it"
                         value={formData.name_it}
                         onChange={handleInputChange}
                         className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
-                        placeholder="Ex: Marketing Digitale"
+                        placeholder="E.g. Marketing Digitale"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome (ES)</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-1.5">Name (ES)</label>
                       <input
                         type="text"
                         name="name_es"
                         value={formData.name_es}
                         onChange={handleInputChange}
                         className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors"
-                        placeholder="Ex: Marketing Digital"
+                        placeholder="E.g. Marketing Digital"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Descrição</label>
-                    <textarea 
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Description</label>
+                    <textarea
                       name="description"
                       rows="2"
                       value={formData.description}
                       onChange={handleInputChange}
                       className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors resize-none"
-                      placeholder="Descrição da categoria..."
+                      placeholder="Category description..."
                     ></textarea>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Ícone Representativo</label>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Icon</label>
                     <div className="grid grid-cols-6 sm:grid-cols-12 gap-3">
                       {EMOJI_ICONS.map(icon => (
                         <button
@@ -470,14 +482,14 @@ export default function AdminCategories({ user }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Cor de Destaque</label>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Accent Colour</label>
                     <div className="flex items-center gap-4">
                       <input
                         type="color"
                         value={/^#[0-9A-Fa-f]{6}$/.test(formData.color) ? formData.color : '#f59e0b'}
                         onChange={(e) => handleColorSelect(e.target.value)}
                         className="w-14 h-14 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] cursor-pointer p-1"
-                        title="Escolher cor"
+                        title="Choose colour"
                       />
                       <input
                         type="text"
@@ -507,7 +519,7 @@ export default function AdminCategories({ user }) {
                       className="hidden" 
                     />
                     <div className="flex flex-col">
-                      <span className="text-white font-medium flex items-center gap-1">Categoria Ativa</span>
+                      <span className="text-white font-medium flex items-center gap-1">Active Category</span>
                     </div>
                   </label>
 
@@ -515,21 +527,21 @@ export default function AdminCategories({ user }) {
               </div>
 
               <div className="p-8 border-t border-[#2a2a2a] bg-[#141414] flex justify-end gap-4">
-                <button 
+                <button
                   type="button"
                   onClick={handleCloseModal}
                   disabled={isSaving}
                   className="px-6 py-3 rounded-xl font-medium text-gray-300 hover:text-white hover:bg-[#222] transition-colors"
                 >
-                  Cancelar
+                  Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   form="categoryForm"
                   disabled={isSaving}
                   className="px-8 py-3 rounded-xl font-bold bg-[#f59e0b] hover:bg-[#d97706] text-black transition-colors disabled:opacity-50"
                 >
-                  {isSaving ? 'Salvando...' : editingId ? 'Salvar Alterações' : 'Criar Categoria'}
+                  {isSaving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Category'}
                 </button>
               </div>
             </motion.div>

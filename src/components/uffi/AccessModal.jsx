@@ -231,7 +231,25 @@ function EmbedFrame({ src, title, aspectRatio = '16/9', height, thumbnail, exter
 
 // ─── Single deliverable renderer ──────────────────────────────────────────────
 
-export function DeliverableItem({ item, groupConfig, idx, totalInGroup }) {
+export function DeliverableItem({ item, groupConfig, idx, totalInGroup, viewed, onView }) {
+  return (
+    <div className="relative" onClickCapture={() => !viewed && onView?.(item.id)}>
+      {viewed && (
+        <span
+          className="absolute -top-1.5 -left-1.5 z-10 w-4 h-4 rounded-full bg-emerald-500 border-2 border-zinc-950 flex items-center justify-center"
+          title="Viewed"
+        >
+          <svg viewBox="0 0 12 12" className="w-2 h-2" fill="none" stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 6l3 3 5-6" />
+          </svg>
+        </span>
+      )}
+      <DeliverableContent item={item} groupConfig={groupConfig} idx={idx} totalInGroup={totalInGroup} />
+    </div>
+  );
+}
+
+function DeliverableContent({ item, groupConfig, idx, totalInGroup }) {
   const provider  = (item.provider || '').toLowerCase();
   const type      = (item.type    || 'other').toLowerCase();
   const url       = safeUrl(item.url);

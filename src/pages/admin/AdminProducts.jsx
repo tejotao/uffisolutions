@@ -68,6 +68,8 @@ export default function AdminProducts({ user }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [langFilter, setLangFilter]   = useState('all');
   const [catFilter, setCatFilter]     = useState('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId]     = useState(null);
   const [isSaving, setIsSaving]       = useState(false);
@@ -267,6 +269,14 @@ export default function AdminProducts({ user }) {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, langFilter, catFilter]);
+
   const getCategoryName = (id) => {
     const c = categories.find((x) => x.id === id);
     return c ? `${c.icon || '📁'} ${c.name}` : '-';
@@ -345,7 +355,7 @@ export default function AdminProducts({ user }) {
                   <tr><td colSpan="7" className="py-16 text-center text-zinc-600">
                     <Package size={32} className="mx-auto mb-2 opacity-20" /> No products found
                   </td></tr>
-                ) : filtered.map((product) => {
+                ) : paginated.map((product) => {
                   const isActive    = product.active ?? true;
                   const isFree      = parseFloat(product.price) === 0 || !product.price;
                   const deliverables = deliverablesMap.get(product.id) || [];
@@ -430,6 +440,28 @@ export default function AdminProducts({ user }) {
             </table>
           </div>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 text-sm text-zinc-500">
+            <span>Page {currentPage} of {totalPages}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ══ Product Modal ══ */}

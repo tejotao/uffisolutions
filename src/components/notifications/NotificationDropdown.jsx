@@ -2,13 +2,13 @@ import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { useI18n } from '@/contexts/I18nContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import NotificationItem from './NotificationItem';
 import { Bell } from 'lucide-react';
 
 const NotificationDropdown = ({ isOpen, onClose }) => {
   const { notifications, markAsRead, markAllAsRead, deleteNotification, unreadCount } = useNotifications();
-  const { t } = useI18n();
+  const { t } = useLanguage();
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -37,14 +37,14 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
           <div className="p-4 border-b border-[#2a2a2a] flex items-center justify-between bg-[#111]">
             <h3 className="text-white font-bold flex items-center gap-2">
               <Bell size={18} className="text-[#f59e0b]" />
-              {t('notifications.title') || 'Notificações'}
+              {t('notifications.title')}
             </h3>
             {unreadCount > 0 && (
-              <button 
+              <button
                 onClick={() => markAllAsRead()}
                 className="text-xs text-[#f59e0b] hover:text-[#d97706] font-bold transition-colors"
               >
-                {t('notifications.markAllRead') || 'Marcar todas lidas'}
+                {t('notifications.mark_all_read')}
               </button>
             )}
           </div>
@@ -53,11 +53,11 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
             {notifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <Bell size={40} className="mx-auto mb-3 opacity-20" />
-                <p>{t('notifications.empty') || 'Sem notificações no momento.'}</p>
+                <p>{t('notifications.empty')}</p>
               </div>
             ) : (
               notifications.slice(0, 10).map(notif => (
-                <NotificationItem 
+                <NotificationItem
                   key={notif.id}
                   notification={notif}
                   onMarkAsRead={markAsRead}
@@ -69,12 +69,12 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
           </div>
 
           {notifications.length > 0 && (
-            <Link 
-              to="/notifications" 
+            <Link
+              to="/notifications"
               onClick={onClose}
               className="block w-full p-3 text-center text-sm font-bold text-gray-400 hover:text-white hover:bg-[#1c1c1c] transition-colors border-t border-[#2a2a2a] bg-[#111]"
             >
-              {t('notifications.viewAll') || 'Ver todas as notificações'}
+              {t('notifications.view_all')}
             </Link>
           )}
         </motion.div>

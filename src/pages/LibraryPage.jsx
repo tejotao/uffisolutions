@@ -11,7 +11,7 @@ import Footer from '@/components/uffi/Footer';
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, isAccessValid } from '@/lib/accessQueries';
-import { getDeliverablesForProduct } from '@/lib/deliverableQueries';
+import { getDeliverablesForProduct, getViewedDeliverableIds, markDeliverableViewed } from '@/lib/deliverableQueries';
 
 const getLanguageFlag = (lang) => {
   if (!lang) return '🌐';
@@ -38,6 +38,7 @@ export default function LibraryPage({ user }) {
   const [hasAccess, setHasAccess] = useState(false);
   const [expiryDate, setExpiryDate] = useState(null);
   const [items, setItems]       = useState([]);
+  const [viewedIds, setViewedIds] = useState(new Set());
 
   useEffect(() => {
     if (!user || !productId) return;
@@ -66,6 +67,8 @@ export default function LibraryPage({ user }) {
           // Most recently added first.
           const sorted = [...resolved].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
           setItems(sorted);
+          const viewed = await getViewedDeliverableIds(user.id, sorted.map((d) => d.id));
+          setViewedIds(viewed);
         }
       } catch (err) {
         console.error('Library error:', err);
@@ -75,6 +78,11 @@ export default function LibraryPage({ user }) {
     };
     load();
   }, [user, productId]);
+
+  const handleView = (deliverableId) => {
+    setViewedIds((prev) => new Set(prev).add(deliverableId));
+    markDeliverableViewed(user.id, deliverableId);
+  };
 
   if (!user) return null;
 
@@ -203,7 +211,10 @@ export default function LibraryPage({ user }) {
                       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.04 }}
                     >
-                      <DeliverableItem item={item} groupConfig={config} idx={typeSeen[type] - 1} totalInGroup={typeSeen[type]} />
+                      <DeliverableItem
+                        item={item} groupConfig={config} idx={typeSeen[type] - 1} totalInGroup={typeSeen[type]}
+                        viewed={viewedIds.has(item.id)} onView={handleView}
+                      />
                       <a
                         href={feedbackHref}
                         className="inline-flex items-center gap-1 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors mt-1.5 ml-1"

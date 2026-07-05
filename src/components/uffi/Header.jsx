@@ -17,6 +17,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 import Logo from '@/components/uffi/Logo';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 const Header = ({
   user,
@@ -129,6 +130,7 @@ const Header = ({
 
               {/* ── Auth zone ── */}
               <div className="flex items-center gap-3 ml-2 pl-4 border-l border-[#2a2a2a]">
+                {user && <NotificationBell />}
                 {user ? (
                   isAdminUser ? (
                     /* Admin: full dropdown with area navigation */
@@ -216,7 +218,7 @@ const Header = ({
               <div className="px-4 py-6 space-y-4">
 
                 {/* User status chip */}
-                <div className="flex items-center gap-3 pb-4 border-b border-[#2a2a2a]">
+                <div className="flex items-center justify-between gap-3 pb-4 border-b border-[#2a2a2a]">
                   {user ? (
                     <button
                       onClick={() => handleNavClick('/dashboard')}
@@ -228,6 +230,7 @@ const Header = ({
                   ) : (
                     <span className="text-sm text-gray-400">{t('nav.guest')}</span>
                   )}
+                  {user && <NotificationBell />}
                 </div>
 
                 {/* Search + Language (public pages only) */}

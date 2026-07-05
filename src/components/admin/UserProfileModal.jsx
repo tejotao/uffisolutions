@@ -7,7 +7,7 @@ import { updateUser } from '@/lib/catalogQueries';
 import { useToast } from '@/hooks/use-toast';
 import { getInitials, cn } from '@/lib/utils';
 
-const CLASSIFICATION_OPTIONS = ['VIP', 'Standard', 'Lead', 'Em risco', 'Inativo'];
+const CLASSIFICATION_OPTIONS = ['VIP', 'Standard', 'Lead', 'At risk', 'Inactive'];
 
 const CONTACT_LABELS = { email: 'Email', whatsapp: 'WhatsApp', phone: 'Phone Call' };
 
