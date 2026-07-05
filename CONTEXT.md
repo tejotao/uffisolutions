@@ -1,7 +1,6 @@
 # PRD — UffiSolutions Knowledge Platform
 **Versão:** 1.0  
 **Data:** 30 Junho 2026  
-<!-- staging branch marker: 2026-07-05 — first isolated Preview deploy -->  
 **Autor:** UffiSolutions  
 **Status:** Living Document (actualizado conforme o produto evolui)
 
@@ -1385,7 +1384,53 @@ Webhooks Live e Test são objetos completamente separados no Stripe (não compar
 ### Memória salva (fora do código)
 Adicionada uma memória de referência (`staging_preview_environment`) com a URL de preview, o mecanismo do Protection Bypass, e a lógica de separação de env vars — pra não precisar redescobrir isso numa sessão futura.
 
-### ⏳ Pendente
+### ⏳ Pendente (na época — ver sessão seguinte pra atualização)
 - Preço divergente do produto de teste sandbox (£7 no catálogo vs £1 no Payment Link) — ajustar quando organizar o catálogo de verdade.
-- Reembolso/estorno do Stripe ainda não revoga acesso automaticamente (não pedido até agora).
+- ~~Reembolso/estorno do Stripe ainda não revoga acesso automaticamente~~ **Resolvido — ver sessão seguinte.**
 - Considerar (sem pressa) apagar de vez o projeto Vercel `uffisolutions` antigo (hoje só desconectado do Git) — só depois de confirmar que nada externo depende do domínio `uffisolutions.vercel.app`.
+
+---
+
+## Sessão 05/07/2026 — Auditoria completa da plataforma + correções/melhorias
+
+**Motivação:** usuário pediu uma auditoria completa (histórico de pendências, estado do painel admin, código órfão, segurança, i18n) e depois pediu pra implementar tudo que foi encontrado — os bugs reais e as 9 sugestões de melhoria.
+
+### Achado principal da auditoria: bug real nas categorias
+`createCategory`/`updateCategory` (`catalogQueries.js`) só gravavam nas colunas simples de `categories`. Toda exibição pública (`fetchAllCategories`) lê de `category_translations`, nunca escrita por esse formulário — **qualquer categoria criada/editada pelo Admin aparecia como "Other" ou com nome desatualizado no site**, um resíduo silencioso da migration `2026-07-01_category_names_i18n.sql` (que já avisava, no próprio comentário, que a exibição pública não seria afetada por ela).
+
+### O que foi corrigido/implementado
+
+**1. Bug de categorias** — `createCategory`/`updateCategory` continuam gravando as colunas simples (usadas só pelo form do admin), mas agora `AdminCategories.jsx` também chama uma função nova, `upsertCategoryTranslations()`, que grava as 4 traduções (en/pt/it/es) na tabela `category_translations` de verdade a cada save. `fetchAllCategories` também foi corrigida pra montar o preview do form (EN/PT/IT/ES) a partir dos dados reais da tabela de traduções, não mais das colunas simples desatualizadas.
+
+**2. Painel admin em inglês profissional** — escopo real era menor que parecia: só `AdminCategories.jsx` (100% português) precisou de tradução completa (títulos, toasts, confirm dialogs, placeholders), e duas opções de classificação em `UserProfileModal.jsx` ("Em risco"/"Inativo" → "At risk"/"Inactive"). As outras 4 páginas do admin já estavam em inglês.
+
+**3. Reembolso do Stripe revoga acesso** — `api/stripe-webhook.js` agora escuta `charge.refunded`. Como o Charge não carrega `client_reference_id` (só existe na Checkout Session), busca a sessão original via `stripe.checkout.sessions.list({ payment_intent })`, extrai `userId`/`productId` do `client_reference_id`, e remove a linha de `user_product_access` — funciona até pra compras já feitas antes dessa mudança, sem precisar de migration nova.
+
+**4. Notificações conectadas (+ 1 gatilho real)** — toda a UI (`NotificationBell`/`NotificationDropdown`/`NotificationItem`) já existia, mas nada estava ligado e a tabela nem existia no banco:
+- Nova migration `sql/2026-07-05_notifications.sql`.
+- `AuthProvider` (contexto separado, próprio, que já existia mas nunca foi montado) e `NotificationProvider` agora envolvem o app inteiro em `main.jsx`.
+- Rota `/notifications` adicionada; sino montado no `Header.jsx` (desktop + mobile) e na topbar do `UserDashboard.jsx`.
+- **Bugs extras encontrados e corrigidos nesse caminho**: `NotificationsPage.jsx`, `NotificationItem.jsx` e `NotificationDropdown.jsx` importavam `useI18n` de um `I18nContext` que **não tem nenhum provider montado em lugar nenhum do app** — teria derrubado a página assim que alguém clicasse no sino ou acessasse `/notifications`. Trocado pelo `useLanguage`/`t()` de verdade, com chaves novas adicionadas nos 4 idiomas em `translations.js`. `NotificationsPage.jsx` também importava `Logo` de um caminho que não existe no padrão do projeto (`@/components/Logo` em vez de `@/components/uffi/Logo`) — corrigido também.
+- Gatilho real: `api/stripe-webhook.js` cria uma notificação ("Purchase confirmed") pro usuário assim que o acesso é liberado com sucesso.
+
+**5. Perfil — idioma e senha editáveis** — `ProfileModal.jsx` (self-service) ganhou um seletor de idioma (grava em `language`+`preferred_language`, mesma lógica que só existia no modal de boas-vindas do primeiro login) e uma seção de trocar senha (reaproveita `updatePassword` já existente). Foto/avatar ficou de fora por decisão do usuário — exigiria infraestrutura de storage nova.
+
+**6. "Visto" nos entregáveis da biblioteca** — nova tabela `deliverable_views` (`sql/2026-07-05_deliverable_views.sql`), novo helper em `deliverableQueries.js`, e `DeliverableItem` (`AccessModal.jsx`) ganhou um badge de "visto" + marca ao clicar, sem duplicar lógica entre os vários tipos de mídia (refatorado pra envolver o conteúdo existente com um wrapper único, em vez de mexer em cada branch de YouTube/Vimeo/PDF/etc. separadamente).
+
+**7. Rate limiting em `/api/check-email`** — sem KV/Redis no projeto, implementado via tabela nova `sql/2026-07-05_rate_limits.sql` (por IP, janela de 5 min, limite de 10 tentativas).
+
+**8. Paginação no Admin** — client-side (sem mudar as funções de busca compartilhadas) em `AdminProducts.jsx` e `AdminUsers.jsx`, 20 itens por página. `AdminCategories.jsx` não precisou (dataset pequeno por natureza).
+
+### O que NÃO foi feito nesta rodada (por decisão do usuário)
+- Checagem manual de RLS no Supabase — usuário vai conferir sozinho.
+- Limpeza dos ~50 arquivos órfãos — deixados como estão, sem risco pro que já funciona.
+- Foto/avatar de perfil — precisa de infraestrutura de storage nova, fica pra depois.
+
+### Verificação
+- `eslint` seguiu travando neste ambiente (mesmo problema de kernel já documentado várias vezes) — todos os arquivos tocados (22 no total) verificados via parser do Babel (checagem de sintaxe) e passaram limpos.
+- Publicado na branch `staging` (commit `dc6d306`) pra teste manual antes de ir pra `main`/produção.
+
+### ⏳ Pendente
+- Testar manualmente na URL de preview da `staging`: criar categoria nova e confirmar nome certo no site; trocar idioma/senha no perfil; ver notificação aparecer após compra de teste; testar paginação; testar reembolso de uma compra sandbox.
+- Rodar as 3 migrations novas (`notifications`, `deliverable_views`, `rate_limits`) no Supabase.
+- Depois de validado, fundir `staging` → `main`.
