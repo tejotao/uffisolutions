@@ -1430,7 +1430,20 @@ Adicionada uma memória de referência (`staging_preview_environment`) com a URL
 - `eslint` seguiu travando neste ambiente (mesmo problema de kernel já documentado várias vezes) — todos os arquivos tocados (22 no total) verificados via parser do Babel (checagem de sintaxe) e passaram limpos.
 - Publicado na branch `staging` (commit `dc6d306`) pra teste manual antes de ir pra `main`/produção.
 
+**✅ As 3 migrations rodadas no Supabase pelo usuário.**
+
+### Correção extra — `rate_limits` sem RLS (achado pelo usuário)
+O comentário original do `sql/2026-07-05_rate_limits.sql` dizia "RLS stays off — no anon-key access path", o que estava **errado**: o Supabase expõe toda tabela do schema `public` pela API REST por padrão, então sem RLS qualquer um com a chave `anon` (pública, vai no bundle do site) conseguiria ler ou resetar os contadores de rate limit direto, driblando a proteção. Corrigido: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` sem nenhuma policy (nega tudo pra `anon`/`authenticated`; a service role usada pelo `/api/check-email` sempre ignora RLS, então nada muda no funcionamento real).
+
+### Bug extra encontrado ao testar — "Inactive" era só cosmético
+Usuário testou um produto marcado inativo no Admin e reparou que ele **continuava aparecendo pro público** — nenhum lugar do código de fato filtrava por `active`. Corrigido:
+- `HomePage.jsx`/`ProductsPage.jsx`: produtos inativos somem da vitrine/catálogo.
+- `ProductDetail.jsx`: mostra "produto indisponível" em vez da tela de compra — **mas só pra quem não tem acesso ainda**. Quem já comprou continua vendo normal e acessando a Biblioteca, mesmo que o produto vire inativo depois (inativar nunca revoga acesso de quem já tem).
+- Traduções novas (`detail.unavailable`/`detail.unavailable_desc`) nos 4 idiomas.
+
+### Sugestão implementada — contador de "donos" por produto no Admin
+Motivação do usuário: vão cadastrar vários produtos gratuitos, e querem ver quanto de interesse/aquisição cada produto teve (pago ou grátis, mesma tabela `user_product_access`). Nova função `getProductAccessCounts()` em `accessQueries.js`, nova coluna "Owners" em `AdminProducts.jsx` (mostra `ativos / total`, ou "—" se ninguém tiver).
+
 ### ⏳ Pendente
-- Testar manualmente na URL de preview da `staging`: criar categoria nova e confirmar nome certo no site; trocar idioma/senha no perfil; ver notificação aparecer após compra de teste; testar paginação; testar reembolso de uma compra sandbox.
-- Rodar as 3 migrations novas (`notifications`, `deliverable_views`, `rate_limits`) no Supabase.
+- Testar manualmente na URL de preview da `staging`: criar categoria nova e confirmar nome certo no site; trocar idioma/senha no perfil; ver notificação aparecer após compra de teste; testar paginação; testar reembolso de uma compra sandbox; confirmar que produto inativo some da vitrine mas continua na Biblioteca de quem já comprou.
 - Depois de validado, fundir `staging` → `main`.
