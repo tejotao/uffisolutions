@@ -8,7 +8,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Tags, Users, ShieldCheck,
   LogOut, Menu, X, ChevronLeft, ChevronDown,
-  Layers, UserCog, Gauge,
+  Layers, UserCog, Gauge, LifeBuoy,
 } from 'lucide-react';
 import Logo from '@/components/uffi/Logo';
 import { logout } from '@/lib/supabaseAuth';
@@ -41,6 +41,7 @@ const NAV_GROUPS = [
     items: [
       { label: 'Users',        icon: Users,       path: '/admin/users'         },
       { label: 'Access Board', icon: ShieldCheck,  path: '/admin/access-board' },
+      { label: 'Support',      icon: LifeBuoy,     path: '/admin/support'      },
     ],
   },
 ];

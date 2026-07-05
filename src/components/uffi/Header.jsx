@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, LayoutDashboard, Search, ShieldAlert, Package, Settings } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Search, ShieldAlert, Package, Settings, LifeBuoy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logout } from '@/lib/supabaseAuth';
 import { getUserRole, ROLES } from '@/lib/rolePermissions';
@@ -18,6 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 import Logo from '@/components/uffi/Logo';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import SupportModal from '@/components/support/SupportModal';
 
 const Header = ({
   user,
@@ -30,6 +31,7 @@ const Header = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -130,6 +132,12 @@ const Header = ({
 
               {/* ── Auth zone ── */}
               <div className="flex items-center gap-3 ml-2 pl-4 border-l border-[#2a2a2a]">
+                {user && (
+                  <button onClick={() => setShowSupportModal(true)} title="Contact Support"
+                    className="p-2 text-gray-300 hover:text-white transition-colors rounded-full hover:bg-white/5">
+                    <LifeBuoy size={18} />
+                  </button>
+                )}
                 {user && <NotificationBell />}
                 {user ? (
                   isAdminUser ? (
@@ -303,6 +311,10 @@ const Header = ({
           )}
         </AnimatePresence>
       </header>
+
+      {showSupportModal && user && (
+        <SupportModal user={user} onClose={() => setShowSupportModal(false)} />
+      )}
     </div>
   );
 };

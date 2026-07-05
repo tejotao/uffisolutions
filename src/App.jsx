@@ -19,6 +19,7 @@ import AdminProducts from '@/pages/admin/AdminProducts';
 import AdminCategories from '@/pages/admin/AdminCategories';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AccessBoard from '@/pages/admin/AccessBoard';
+import AdminSupport from '@/pages/admin/AdminSupport';
 import NotificationsPage from '@/pages/NotificationsPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -123,6 +124,7 @@ function App() {
           <Route path="/admin/categories"   element={<AdminRoute user={user}><AdminCategories user={user} /></AdminRoute>} />
           <Route path="/admin/users"        element={<AdminRoute user={user}><AdminUsers user={user} /></AdminRoute>} />
           <Route path="/admin/access-board" element={<AdminRoute user={user}><AccessBoard user={user} /></AdminRoute>} />
+          <Route path="/admin/support"      element={<AdminRoute user={user}><AdminSupport user={user} /></AdminRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

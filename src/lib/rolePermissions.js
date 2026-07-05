@@ -12,6 +12,7 @@ export const PERMISSIONS = {
     products: ['create', 'read', 'update', 'delete', 'feature'],
     categories: ['create', 'read', 'update', 'delete'],
     users: ['create', 'read', 'update', 'delete', 'block', 'changeRole', 'resetPassword'],
+    support: ['read', 'update'],
     analytics: ['read'],
     settings: ['read', 'update'],
     system: ['read', 'update']
@@ -20,6 +21,7 @@ export const PERMISSIONS = {
     products: ['create', 'read', 'update', 'delete', 'feature'],
     categories: ['create', 'read', 'update', 'delete'],
     users: ['read', 'update', 'block', 'resetPassword'],
+    support: ['read', 'update'],
     analytics: ['read'],
     settings: ['read'],
     system: []
@@ -28,6 +30,7 @@ export const PERMISSIONS = {
     products: ['read', 'update'],
     categories: ['read'],
     users: ['read'],
+    support: ['read', 'update'],
     analytics: [],
     settings: [],
     system: []
@@ -36,6 +39,7 @@ export const PERMISSIONS = {
     products: ['read'],
     categories: ['read'],
     users: [],
+    support: [],
     analytics: [],
     settings: [],
     system: []
@@ -44,6 +48,7 @@ export const PERMISSIONS = {
     products: ['read'],
     categories: ['read'],
     users: [],
+    support: [],
     analytics: [],
     settings: [],
     system: []

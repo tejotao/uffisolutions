@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Package, AlertCircle, Search, Home, LogOut,
   User, Loader2, Copy, Download, ExternalLink, Play, CheckCircle, ChevronRight, Clock,
-  ShieldAlert, Lock, UserCog,
+  ShieldAlert, Lock, UserCog, LifeBuoy,
 } from 'lucide-react';
 import { resolveDeliverables } from '@/components/uffi/AccessModal';
 import ProfileModal from '@/components/uffi/ProfileModal';
+import SupportModal from '@/components/support/SupportModal';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { getUserRole, ROLES } from '@/lib/rolePermissions';
 import Footer from '@/components/uffi/Footer';
@@ -304,6 +305,7 @@ export default function UserDashboard({ user }) {
   const [fullName, setFullName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('tab') === 'settings') {
@@ -489,6 +491,11 @@ export default function UserDashboard({ user }) {
         )}
       </AnimatePresence>
 
+      {/* ── Support modal ── */}
+      {showSupportModal && (
+        <SupportModal user={user} onClose={() => setShowSupportModal(false)} />
+      )}
+
       {/* ── First-login welcome modal ── */}
       <AnimatePresence>
         {showWelcomeModal && (
@@ -551,6 +558,10 @@ export default function UserDashboard({ user }) {
           </button>
           <button onClick={() => navigate('/products')} title="Catalog" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
             <Package size={18} />
+          </button>
+
+          <button onClick={() => setShowSupportModal(true)} title="Contact Support" className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition-colors">
+            <LifeBuoy size={18} />
           </button>
 
           <NotificationBell />
