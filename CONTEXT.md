@@ -1498,3 +1498,21 @@ Ao cruzar com o histórico deste arquivo, só restava genuinamente pendente:
 ### ⏳ Pendente
 - Testar ponta a ponta o sistema de suporte agora que a tabela existe: abrir chamado como usuário comum → conferir email `mailto:` com assunto certo → conferir listagem em Admin → Support.
 - Mesmos testes manuais já listados na sessão de 05/07 (categorias, paginação, reembolso, produto inativo) antes de fundir `staging` → `main`.
+
+---
+
+## Sessão 06/07/2026 (cont.) — Suporte: visibilidade de tickets + merge pra produção
+
+**Motivação:** usuário testou o fluxo de suporte na prática (abriu um chamado como usuário comum) e notou dois problemas de UX: nada sinalizava a existência do ticket no painel Admin (o menu "Support" era um item comum, sem destaque), e o próprio usuário não tinha como conferir o status do que já tinha enviado depois da confirmação inicial.
+
+### O que foi implementado
+- **`supportQueries.js`** — nova `getOpenTicketCount()` (query só de contagem, sem trazer linhas).
+- **`AdminLayout.jsx`** — badge vermelho com o nº de tickets abertos no item "Support" do menu lateral, e um atalho extra (ícone de bóia + mesmo badge) na topbar, visível sempre que houver ao menos 1 ticket aberto.
+- **`SupportModal.jsx`** — ao abrir, busca os tickets do próprio usuário (`getMyTickets`) e mostra a lista (assunto, status Open/Resolved, data) antes do formulário. Botão "Open New Ticket" revela o formulário de um novo chamado; quem já tem tickets vê a lista primeiro, não o formulário em branco.
+
+### Publicado
+- `staging` (`495504c`) → testado e aprovado pelo usuário → **fundido em `main` via fast-forward, publicado em produção** (`www.uffisolutions.com`).
+- Esse mesmo merge levou junto todas as correções da sessão anterior (generate-llms EISDIR, hooks-order em AdminProducts/AdminUsers, ícone quebrado em AdminSupport, botão de suporte no mobile do Header) — que até então só existiam em `staging`.
+
+### ⏳ Pendente
+- Confirmar visualmente na produção (pós-build da Vercel) que o badge aparece corretamente e que a lista de tickets do usuário carrega.
