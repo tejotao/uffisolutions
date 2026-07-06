@@ -3,7 +3,7 @@
  * Groups are collapsible. Does NOT touch AuthContext or ProtectedRoute logic.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Tags, Users, ShieldCheck,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import Logo from '@/components/uffi/Logo';
 import { logout } from '@/lib/supabaseAuth';
+import { canAccess } from '@/lib/rolePermissions';
+import { getOpenTicketCount } from '@/lib/supportQueries';
 import { cn, getInitials } from '@/lib/utils';
 
 // ─── Navigation groups ────────────────────────────────────────────────────────
@@ -56,7 +58,7 @@ const ROLE_STYLE = {
 
 // ─── Sidebar group ────────────────────────────────────────────────────────────
 
-function NavGroup({ group, isActiveGroup, collapsed, onToggle, onNav, isActivePath }) {
+function NavGroup({ group, isActiveGroup, collapsed, onToggle, onNav, isActivePath, badges }) {
   const GroupIcon = group.icon;
 
   return (
@@ -87,6 +89,7 @@ function NavGroup({ group, isActiveGroup, collapsed, onToggle, onNav, isActivePa
           {group.items.map((item) => {
             const Icon   = item.icon;
             const active = isActivePath(item);
+            const badge  = badges?.[item.path];
             return (
               <Link
                 key={item.path}
@@ -105,7 +108,12 @@ function NavGroup({ group, isActiveGroup, collapsed, onToggle, onNav, isActivePa
                 )}
                 <Icon size={14} className={active ? 'text-amber-400' : 'text-zinc-500'} />
                 <span>{item.label}</span>
-                {active && (
+                {badge > 0 && (
+                  <span className="ml-auto text-[10px] font-black bg-red-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+                {active && !badge && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400" />
                 )}
               </Link>
@@ -122,9 +130,15 @@ function NavGroup({ group, isActiveGroup, collapsed, onToggle, onNav, isActivePa
 export default function AdminLayout({ user, children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed]   = useState({}); // { groupId: true/false }
+  const [openTicketCount, setOpenTicketCount] = useState(0);
 
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!canAccess(user, 'support', 'read')) return;
+    getOpenTicketCount().then(setOpenTicketCount);
+  }, [user]);
 
   const handleLogout = async () => {
     try { await logout(); } catch { /* ignore */ }
@@ -180,6 +194,16 @@ export default function AdminLayout({ user, children }) {
 
         {/* User chip */}
         <div className="flex items-center gap-2">
+          {openTicketCount > 0 && (
+            <Link to="/admin/support" title={`${openTicketCount} open support ticket${openTicketCount !== 1 ? 's' : ''}`}
+              className="relative p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+              <LifeBuoy size={17} />
+              <span className="absolute -top-0.5 -right-0.5 text-[9px] font-black bg-red-500 text-white rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 border border-zinc-950">
+                {openTicketCount > 99 ? '99+' : openTicketCount}
+              </span>
+            </Link>
+          )}
+
           <div className="hidden sm:flex items-center gap-2.5 bg-zinc-900 border border-zinc-800 rounded-full pl-1.5 pr-3 py-1">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xs font-black text-black shadow-sm">
               {initial}
@@ -229,6 +253,7 @@ export default function AdminLayout({ user, children }) {
                 onToggle={() => toggleGroup(group.id)}
                 onNav={() => setMobileOpen(false)}
                 isActivePath={isActivePath}
+                badges={{ '/admin/support': openTicketCount }}
               />
             ))}
           </nav>

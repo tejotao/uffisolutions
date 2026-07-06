@@ -49,6 +49,16 @@ export const getAllTickets = async () => {
   return tickets.map((t) => ({ ...t, user: byId[t.user_id] || null }));
 };
 
+// Powers the badge on the admin nav — count only, no row data needed.
+export const getOpenTicketCount = async () => {
+  const { count, error } = await supabase
+    .from('support_tickets')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'open');
+  if (error) { console.error('getOpenTicketCount error:', error); return 0; }
+  return count || 0;
+};
+
 export const resolveTicket = async (ticketId, resolvedBy) => {
   const { error } = await supabase
     .from('support_tickets')
