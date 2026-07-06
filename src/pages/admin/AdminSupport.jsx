@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LifeBuoy, AlertTriangle, Mail, CheckCircle, RotateCcw, Loader2, MessageSquareText } from 'lucide-react';
+import { LifeBuoy, AlertTriangle, Mail, CheckCircle, RotateCcw, Loader2, MessageSquare } from 'lucide-react';
 import { getAllTickets, resolveTicket, reopenTicket } from '@/lib/supportQueries';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -133,7 +133,7 @@ export default function AdminSupport({ user }) {
           </div>
         ) : tickets.length === 0 ? (
           <div className="text-center py-20 text-zinc-600">
-            <MessageSquareText size={36} className="mx-auto mb-3 opacity-20" />
+            <MessageSquare size={36} className="mx-auto mb-3 opacity-20" />
             <p className="text-sm">No tickets yet.</p>
           </div>
         ) : (

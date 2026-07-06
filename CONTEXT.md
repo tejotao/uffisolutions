@@ -1468,4 +1468,33 @@ Motivação do usuário: vão cadastrar vários produtos gratuitos, e querem ver
 
 ### ⏳ Pendente
 - Testar na `staging`: abrir um chamado como usuário comum, confirmar que o cliente de email abre com o assunto certo, e que aparece no Admin → Support.
-- Rodar a migration `sql/2026-07-05_support_tickets.sql` no Supabase.
+- ~~Rodar a migration `sql/2026-07-05_support_tickets.sql` no Supabase.~~ **Rodada em 06/07/2026 — ver sessão seguinte.**
+
+---
+
+## Sessão 06/07/2026 — Auditoria completa (lint + build + revisão de código) + limpeza final
+
+**Motivação:** usuário pediu uma inspeção completa do estado atual do repo (grande volume de mudanças não commitadas: onboarding de compra, notificações, suporte, Stripe refund, i18n do admin, paginação) antes de seguir, com checklist do que estava OK e do que faltava.
+
+### Bug corrigido antes da auditoria — `generate-llms.js` quebrando o build da Vercel
+O log de build mostrava `❌ Error processing /vercel/path0/src/pages/admin: EISDIR: illegal operation on a directory, read`. Causa: `findReactFiles()` (`tools/generate-llms.js`) fazia um `readdirSync` raso e tentava ler `src/pages/admin` (uma pasta) como se fosse um arquivo de página — o erro era engolido por um try/catch e não derrubava o build, mas também significava que **as páginas do admin nunca eram varridas** pro `llms.txt`. Corrigido pra percorrer subpastas recursivamente e só pegar `.js/.jsx/.ts/.tsx`.
+
+### 3 erros reais achados pelo `eslint` (rodava travado nesta máquina — contornado rodando com stdin redirecionado de `/dev/null`, mesma classe do travamento de kernel já documentado)
+- **`AdminProducts.jsx`** e **`AdminUsers.jsx`** — `useEffect` de reset de paginação declarado *depois* de um `return` condicional (`if (!permissions.canRead) return ...`) → violação real das Rules of Hooks (nº de hooks muda entre renders se a permissão mudar). Movidos pra antes do return, nos dois arquivos.
+- **`AdminSupport.jsx`** — import de `MessageSquareText`, ícone que não existe na versão instalada do `lucide-react` (erro de import). Trocado por `MessageSquare`.
+- `npm run lint` limpo depois, 0 erros.
+
+### Build local — não verificado até o fim (limitação conhecida da máquina)
+`npm run build` (e até um `git clone` de teste, tentando reproduzir num diretório limpo) travaram sem progresso real de CPU — mesma classe de travamento de kernel/iCloud já documentada na sessão de 03/07 (aquele caso era `git`, agora foi `esbuild`/`vite build`). Não é um problema do código. Build da Vercel (screenshot do usuário) já funciona normalmente e deve ficar 100% limpo com o fix do `generate-llms.js` acima.
+
+### Revisão manual de tudo que estava não commitado — sem problemas encontrados
+Confirmado, arquivo por arquivo: fluxo de retomada de compra (`ProductDetail.jsx`/`UserDashboard.jsx`/`BuyAuthPage.jsx`), "visto" nos entregáveis (`deliverableQueries.js`/`LibraryPage.jsx`/`AccessModal.jsx`), troca de senha/idioma no perfil, sino de notificações + modal de suporte no Header/Dashboard, tradução de categorias (`upsertCategoryTranslations`), `api/check-email.js` e `api/stripe-webhook.js` (boas práticas: verificação de assinatura, service role só no servidor, rate limit, RLS), e as 6 migrations SQL novas (todas com RLS coerente).
+
+### Checklist de pendências — a maioria já tinha sido resolvida em sessões anteriores
+Ao cruzar com o histórico deste arquivo, só restava genuinamente pendente:
+- Rodar `sql/2026-07-05_support_tickets.sql` no Supabase — **feito nesta sessão** (`Success. No rows returned`, confirmado pelo usuário).
+- Decisão sobre 2 arquivos soltos na raiz, já sinalizados desde 02/07: `EMAIL_TEMPLATES.html` (mantido — é referência ativa) e o zip `"uffisolutions-v1.0-28jun2026 codigo Horizons"` (473KB, não rastreado pelo git, não referenciado por nenhum import) — **removido nesta sessão**, confirmado sem nenhuma referência no código antes de apagar.
+
+### ⏳ Pendente
+- Testar ponta a ponta o sistema de suporte agora que a tabela existe: abrir chamado como usuário comum → conferir email `mailto:` com assunto certo → conferir listagem em Admin → Support.
+- Mesmos testes manuais já listados na sessão de 05/07 (categorias, paginação, reembolso, produto inativo) antes de fundir `staging` → `main`.

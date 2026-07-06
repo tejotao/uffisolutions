@@ -238,7 +238,15 @@ const Header = ({
                   ) : (
                     <span className="text-sm text-gray-400">{t('nav.guest')}</span>
                   )}
-                  {user && <NotificationBell />}
+                  {user && (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setShowSupportModal(true)} title="Contact Support"
+                        className="p-2 text-gray-300 hover:text-white transition-colors rounded-full hover:bg-white/5">
+                        <LifeBuoy size={18} />
+                      </button>
+                      <NotificationBell />
+                    </div>
+                  )}
                 </div>
 
                 {/* Search + Language (public pages only) */}

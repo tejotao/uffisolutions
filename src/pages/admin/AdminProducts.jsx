@@ -121,6 +121,10 @@ export default function AdminProducts({ user }) {
 
   useEffect(() => { if (permissions.canRead) loadData(); else setIsLoading(false); }, []);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, langFilter, catFilter]);
+
   if (!permissions.canRead) {
     return (
       <AdminLayout user={user}>
@@ -276,10 +280,6 @@ export default function AdminProducts({ user }) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, langFilter, catFilter]);
 
   const getCategoryName = (id) => {
     const c = categories.find((x) => x.id === id);

@@ -449,6 +449,10 @@ export default function AdminUsers({ user }) {
     else setIsLoading(false);
   }, [permissions.canRead, load]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, roleFilter]);
+
   if (!permissions.canRead) {
     return (
       <AdminLayout user={user}>
@@ -537,10 +541,6 @@ export default function AdminUsers({ user }) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, roleFilter]);
 
   return (
     <AdminLayout user={user}>
