@@ -85,11 +85,17 @@ export default function HomePage({ user }) {
   }, [products, searchQuery, language, showAllProducts, categoryFilter, productCategoryMap]);
 
   // Independent of search/category/language filters — a decorative teaser of
-  // everything on sale, not the actual filtered catalog below.
-  const marqueeProducts = useMemo(
-    () => products.filter((p) => p.active !== false),
-    [products]
-  );
+  // everything on sale, not the actual filtered catalog below. Shuffled so
+  // the order isn't the same every visit.
+  const marqueeProducts = useMemo(() => {
+    const active = products.filter((p) => p.active !== false);
+    const shuffled = [...active];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }, [products]);
 
   // Silently logs searches that match nothing — signal for products people
   // want that we don't sell yet. Anonymous, debounced, best-effort.
@@ -162,7 +168,7 @@ export default function HomePage({ user }) {
                   onClick={() => navigate(`/products/${product.slug || product.id}`)}
                   className="flex items-center gap-2.5 bg-[#141414] border border-[#2a2a2a] rounded-xl pl-2 pr-4 py-2 cursor-pointer hover:border-[#f59e0b]/50 transition-colors shrink-0 w-64"
                 >
-                  <div className="w-9 h-9 rounded-lg overflow-hidden bg-[#1a1a1a] shrink-0">
+                  <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-[#1a1a1a] shrink-0">
                     {product.image_url ? (
                       <img src={product.image_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -170,6 +176,9 @@ export default function HomePage({ user }) {
                         <Play size={14} className="text-[#2a2a2a]" />
                       </div>
                     )}
+                    <span className="absolute -bottom-0.5 -right-0.5 text-xs leading-none">
+                      {getLanguageFlag(product.language)}
+                    </span>
                   </div>
                   <span className="text-sm text-white font-semibold truncate">{product.title || product.name}</span>
                 </div>
