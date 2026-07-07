@@ -84,6 +84,13 @@ export default function HomePage({ user }) {
     });
   }, [products, searchQuery, language, showAllProducts, categoryFilter, productCategoryMap]);
 
+  // Independent of search/category/language filters — a decorative teaser of
+  // everything on sale, not the actual filtered catalog below.
+  const marqueeProducts = useMemo(
+    () => products.filter((p) => p.active !== false),
+    [products]
+  );
+
   // Silently logs searches that match nothing — signal for products people
   // want that we don't sell yet. Anonymous, debounced, best-effort.
   useEffect(() => {
@@ -139,24 +146,37 @@ export default function HomePage({ user }) {
             <p className="text-gray-400 text-lg md:text-xl font-medium mb-6 max-w-2xl mx-auto px-4">
               {t('home.hero.subtitle')}
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button 
-                onClick={() => navigate('/products')}
-                className="bg-[#f59e0b] hover:bg-[#d97706] text-black px-8 py-4 rounded-xl font-bold transition-all shadow-lg w-full sm:w-auto"
-              >
-                {t('home.explore')}
-              </button>
-              {!user && (
-                <button 
-                  onClick={() => navigate('/login')}
-                  className="bg-[#141414] border border-[#2a2a2a] hover:border-[#f59e0b] text-white hover:text-[#f59e0b] px-8 py-4 rounded-xl font-bold transition-all shadow-lg w-full sm:w-auto"
-                >
-                  Acessar Plataforma
-                </button>
-              )}
-            </div>
           </motion.div>
         </section>
+
+        {!loading && marqueeProducts.length > 0 && (
+          <div className="w-full overflow-hidden py-5 border-y border-[#2a2a2a] bg-[#0a0a0a]/60">
+            <motion.div
+              className="flex gap-4 w-max"
+              animate={{ x: ['0%', '-50%'] }}
+              transition={{ duration: marqueeProducts.length * 4, repeat: Infinity, ease: 'linear' }}
+            >
+              {[...marqueeProducts, ...marqueeProducts].map((product, idx) => (
+                <div
+                  key={`${product.id}-${idx}`}
+                  onClick={() => navigate(`/products/${product.slug || product.id}`)}
+                  className="flex items-center gap-2.5 bg-[#141414] border border-[#2a2a2a] rounded-xl pl-2 pr-4 py-2 cursor-pointer hover:border-[#f59e0b]/50 transition-colors shrink-0 w-64"
+                >
+                  <div className="w-9 h-9 rounded-lg overflow-hidden bg-[#1a1a1a] shrink-0">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Play size={14} className="text-[#2a2a2a]" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-sm text-white font-semibold truncate">{product.title || product.name}</span>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        )}
 
         <section className="px-4 py-16 max-w-7xl mx-auto border-t border-[#2a2a2a]">
           <div className="text-center mb-8">

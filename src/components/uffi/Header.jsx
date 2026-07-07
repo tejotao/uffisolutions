@@ -96,6 +96,12 @@ const Header = ({
 
               {!isAdminPage && (
                 <>
+                  {!user && (
+                    <Link to="/products" className="text-gray-300 hover:text-white text-sm font-semibold transition-colors">
+                      {t('nav.products')}
+                    </Link>
+                  )}
+
                   {/* Search bar */}
                   <div className="flex items-center">
                     <AnimatePresence>
