@@ -1554,3 +1554,26 @@ Migration rodada, categorias múltiplas testadas no Admin, filtro/busca validado
 
 ### Publicado
 `staging` (`e8a6b0f`) → aprovado pelo usuário → fundido em `main` via fast-forward, publicado em produção.
+
+---
+
+## Sessão 07/07/2026 (cont.) — Fix: filtro de idioma "inglês" preso + página de produto some do idioma trocado + idioma padrão sempre inglês
+
+**Motivação:** usuário reportou que, na Home/Products com "mostrar todos os idiomas" ativo, clicar na flag do inglês não filtrava (ficava mostrando tudo), enquanto as outras 3 flags filtravam normalmente. Pediu também que o idioma inicial de qualquer primeira leitura de página seja sempre inglês.
+
+### Causa raiz do bug do filtro
+Cada flag de idioma só chamava `changeLanguage(lang.code)`. `HomePage.jsx`/`ProductsPage.jsx` saem do modo "mostrar todos" reagindo a um `useEffect` que depende de `language`/`userChangedLanguage` do contexto. Quando o idioma clicado já é igual ao valor atual — o que acontece com frequência com inglês, por ser o padrão — o `setLanguage()` do React vira um no-op (mesmo valor), e nada dispara o efeito que desliga o "mostrar todos". As outras flags quase sempre representam uma mudança de valor real, por isso funcionavam.
+
+Achado interessante: `HomePage.jsx` e `ProductsPage.jsx` **já passavam** uma prop `onLanguageSelect` pro `<Header>` pensando exatamente nesse problema — só que `Header.jsx`/`LanguageSwitcher.jsx` nunca chegaram a usar essa prop (código órfão, só metade da correção tinha sido feita em algum momento anterior).
+
+### Corrigido
+- **`LanguageSwitcher.jsx`** — cada clique de flag agora chama `onLanguageSelect?.(lang.code)` **incondicionalmente**, além de `changeLanguage`, independente do valor ter mudado ou não.
+- **`Header.jsx`** — recebe `onLanguageSelect` e repassa pros dois `LanguageSwitcher` (desktop e menu mobile).
+- **`LanguageContext.jsx`** — removida a restauração do idioma salvo em `localStorage` no mount; toda primeira leitura de página agora começa sempre em inglês (o `changeLanguage` durante a sessão continua funcionando normalmente, só não persiste mais pra próxima visita).
+- **`ProductDetail.jsx`** — bug relacionado, encontrado antes nesta mesma sessão: cada produto é uma variante de idioma específica (linhas separadas no banco); trocar o idioma do site enquanto na página de um produto deixava a pessoa na mesma página, com conteúdo num idioma e botões/UI em outro. Agora navega pra `/products` (já filtrado pro novo idioma) assim que o idioma muda nessa tela.
+
+### Publicado
+`staging` (`41e5dd9`) → aprovado pelo usuário → fundido em `main` via fast-forward, publicado em produção.
+
+### Incidente recorrente — travamento de git na pasta local (mesma classe já documentada em 03/07)
+Durante esta sessão, `git fetch`/`git status`/`git commit` voltaram a travar repetidamente na pasta local do projeto (mesmo padrão: baixo uso de CPU, sem progresso real, às vezes deixando `.git/index.lock` órfão). Contornado do mesmo jeito de sempre: clonando a branch `staging` numa pasta temporária limpa, aplicando as mudanças lá, e publicando de lá — sem tocar no repositório local travado. Os arquivos de código na pasta original do usuário continuam corretos (foram editados diretamente ali antes do git travar); é só o histórico do git local que fica temporariamente desatualizado/instável. Recomendado reiniciar o VS Code se o problema persistir na próxima sessão.
