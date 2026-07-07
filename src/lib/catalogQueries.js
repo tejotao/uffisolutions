@@ -49,7 +49,7 @@ export const fetchAllProducts = async (language = 'pt') => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('*, product_translations(language, name, description), categories(id, slug, color, icon)')
+      .select('*, product_translations(language, name, description), categories!products_category_id_fkey(id, slug, color, icon)')
       .order('sort_order', { ascending: true });
 
     if (error) throw error;
@@ -64,7 +64,7 @@ export const fetchAllProductsAllLanguages = async () => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('*, product_translations(language, name, description), categories(id, slug, color, icon)')
+      .select('*, product_translations(language, name, description), categories!products_category_id_fkey(id, slug, color, icon)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -81,7 +81,7 @@ export const fetchProductsByCategory = async (categoryId, language = 'pt') => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('*, product_translations(language, name, description), categories(id, slug, color, icon)')
+      .select('*, product_translations(language, name, description), categories!products_category_id_fkey(id, slug, color, icon)')
       .eq('category_id', categoryId)
       .order('sort_order', { ascending: true });
 
