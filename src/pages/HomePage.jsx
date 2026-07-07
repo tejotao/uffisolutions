@@ -2,21 +2,29 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Play } from 'lucide-react';
+import { Play, Search } from 'lucide-react';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import Logo from '@/components/uffi/Logo';
-import { fetchAllProducts, logSearch } from '@/lib/catalogQueries';
+import { fetchAllProducts, fetchAllCategories, getCategoryIdsForProducts, logSearch } from '@/lib/catalogQueries';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function HomePage({ user }) {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [productCategoryMap, setProductCategoryMap] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [showAllProducts, setShowAllProducts] = useState(true);
-  
+
   const navigate = useNavigate();
   const { language, t, userChangedLanguage } = useLanguage();
+
+  // Categories carry all 4 language names at once (name_en/name_pt/name_it/name_es),
+  // so the dropdown label updates instantly when the site language changes —
+  // no refetch needed.
+  const getCategoryLabel = (cat) => cat[`name_${language}`] || cat.name;
 
   const handleShowAllProducts = () => {
     setShowAllProducts(true);
@@ -32,8 +40,14 @@ export default function HomePage({ user }) {
     const loadProducts = async () => {
       setLoading(true);
       try {
-        const prods = await fetchAllProducts('all');
+        const [prods, cats] = await Promise.all([
+          fetchAllProducts('all'),
+          fetchAllCategories('en'),
+        ]);
         setProducts(prods || []);
+        setCategories(cats || []);
+        const map = await getCategoryIdsForProducts((prods || []).map((p) => p.id));
+        setProductCategoryMap(map);
       } catch (err) {
         console.error('❌ Error loading products:', err);
       } finally {
@@ -55,15 +69,20 @@ export default function HomePage({ user }) {
       if (!showAllProducts && !pLang.includes(language)) {
         return false;
       }
-      
+
+      if (categoryFilter !== 'all') {
+        const productCategoryIds = productCategoryMap.get(product.id) || [];
+        if (!productCategoryIds.includes(categoryFilter)) return false;
+      }
+
       const name = product.title || product.name || '';
       const desc = product.description || '';
-      const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           desc.toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchSearch) return false;
       return true;
     });
-  }, [products, searchQuery, language, showAllProducts]);
+  }, [products, searchQuery, language, showAllProducts, categoryFilter, productCategoryMap]);
 
   // Silently logs searches that match nothing — signal for products people
   // want that we don't sell yet. Anonymous, debounced, best-effort.
@@ -140,10 +159,33 @@ export default function HomePage({ user }) {
         </section>
 
         <section className="px-4 py-16 max-w-7xl mx-auto border-t border-[#2a2a2a]">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
               {t('home.our_products')}
             </h2>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-3xl mx-auto mb-12">
+            <div className="relative flex-grow">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('home.search_placeholder')}
+                className="w-full bg-[#141414] border border-[#2a2a2a] rounded-xl pl-12 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f59e0b] transition-colors"
+              />
+            </div>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="bg-[#141414] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors appearance-none sm:w-56"
+            >
+              <option value="all">{t('home.all_categories')}</option>
+              {categories.filter((c) => c.active).map((c) => (
+                <option key={c.id} value={c.id}>{c.icon} {getCategoryLabel(c)}</option>
+              ))}
+            </select>
           </div>
 
           {loading ? (

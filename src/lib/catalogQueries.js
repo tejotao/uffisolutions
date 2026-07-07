@@ -297,6 +297,64 @@ export const upsertCategoryTranslations = async (categoryId, names, description)
   return { error };
 };
 
+// ─── Product ↔ Category (many-to-many) ─────────────────────────────────────
+// A product can belong to more than one category (e.g. a "Personal Shopper"
+// course under Business + Services + Extra Income). products.category_id
+// keeps holding the "primary" one for existing single-category displays;
+// this table is the full set, used to power the Home page category filter.
+
+// Bulk — Map<productId, categoryId[]>. Used by the Home page filter so it
+// doesn't need one round-trip per product.
+export const getCategoryIdsForProducts = async (productIds) => {
+  const ids = [...new Set((productIds || []).filter(Boolean))];
+  if (ids.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from('product_categories')
+    .select('product_id, category_id')
+    .in('product_id', ids);
+  if (error) { console.error('getCategoryIdsForProducts error:', error); return new Map(); }
+
+  const map = new Map();
+  for (const row of data || []) {
+    if (!map.has(row.product_id)) map.set(row.product_id, []);
+    map.get(row.product_id).push(row.category_id);
+  }
+  return map;
+};
+
+export const getCategoryIdsForProduct = async (productId) => {
+  if (!productId) return [];
+  const { data, error } = await supabase
+    .from('product_categories')
+    .select('category_id')
+    .eq('product_id', productId);
+  if (error) { console.error('getCategoryIdsForProduct error:', error); return []; }
+  return (data || []).map((r) => r.category_id);
+};
+
+// Admin only — replaces the full category set for a product.
+export const setProductCategories = async (productId, categoryIds) => {
+  try {
+    const ids = [...new Set((categoryIds || []).filter(Boolean))];
+    const { error: deleteError } = await supabase
+      .from('product_categories')
+      .delete()
+      .eq('product_id', productId);
+    if (deleteError) throw deleteError;
+
+    if (ids.length > 0) {
+      const { error: insertError } = await supabase
+        .from('product_categories')
+        .insert(ids.map((category_id) => ({ product_id: productId, category_id })));
+      if (insertError) throw insertError;
+    }
+    return { error: null };
+  } catch (error) {
+    console.error('setProductCategories error:', error);
+    return { error };
+  }
+};
+
 export const deleteCategory = async (id) => {
   try {
     const { error } = await supabase

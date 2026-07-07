@@ -6,7 +6,10 @@ import {
   AlertTriangle, Globe, FileText, Video, ExternalLink, HardDrive,
   Lock, ChevronRight, Eye, Loader2, Image, Music,
 } from 'lucide-react';
-import { fetchAllProductsAllLanguages, fetchAllCategories, createProduct, updateProduct, deleteProduct } from '@/lib/catalogQueries';
+import {
+  fetchAllProductsAllLanguages, fetchAllCategories, createProduct, updateProduct, deleteProduct,
+  getCategoryIdsForProduct, setProductCategories,
+} from '@/lib/catalogQueries';
 import { getProductAccessCounts } from '@/lib/accessQueries';
 import { getDeliverablesForProduct, getDeliverablesForProducts, replaceProductDeliverables, DELIVERABLE_PROVIDERS } from '@/lib/deliverableQueries';
 import { useToast } from '@/hooks/use-toast';
@@ -81,7 +84,7 @@ export default function AdminProducts({ user }) {
 
   const [formData, setFormData] = useState({
     // ── Tab 1: Public ──
-    name: '', description: '', price: '', category_id: '',
+    name: '', description: '', price: '', category_id: '', category_ids: [],
     language: 'pt', level: 'beginner', image_url: '',
     is_featured: false, active: true,
     // ── Tab 2: Content ──
@@ -145,6 +148,7 @@ export default function AdminProducts({ user }) {
         description:  product.description || '',
         price:        product.price || 0,
         category_id:  product.category_id || '',
+        category_ids: product.category_id ? [product.category_id] : [],
         language:     product.language || 'pt',
         level:        product.level || 'beginner',
         image_url:    product.image_url || product.imageUrl || '',
@@ -158,15 +162,19 @@ export default function AdminProducts({ user }) {
         })),
       });
       setIsModalOpen(true);
-      // Refresh in case the cached map is stale
+      // Refresh in case the cached map/single category_id is stale
       setLoadingDeliverables(true);
-      const fresh = await getDeliverablesForProduct(product.id);
+      const [fresh, categoryIds] = await Promise.all([
+        getDeliverablesForProduct(product.id),
+        getCategoryIdsForProduct(product.id),
+      ]);
       setFormData((p) => ({
         ...p,
         deliverables: fresh.map((d) => ({
           id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url,
           go_unlisted_at: d.go_unlisted_at || '',
         })),
+        category_ids: categoryIds.length > 0 ? categoryIds : p.category_ids,
       }));
       setLoadingDeliverables(false);
     } else {
@@ -174,6 +182,7 @@ export default function AdminProducts({ user }) {
       setFormData({
         name: '', description: '', price: '',
         category_id: categories[0]?.id || '',
+        category_ids: categories[0] ? [categories[0].id] : [],
         language: 'pt', level: 'beginner', image_url: '',
         is_featured: false, active: true,
         stripe_link: '', access_duration_days: '', deliverables: [],
@@ -187,10 +196,22 @@ export default function AdminProducts({ user }) {
     setFormData((p) => ({ ...p, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  // Up to 3 categories per product — enough to help discovery without
+  // diluting what the filter means.
+  const MAX_CATEGORIES = 3;
+  const toggleCategory = (id) => {
+    setFormData((p) => {
+      const has = p.category_ids.includes(id);
+      if (has) return { ...p, category_ids: p.category_ids.filter((x) => x !== id) };
+      if (p.category_ids.length >= MAX_CATEGORIES) return p;
+      return { ...p, category_ids: [...p.category_ids, id] };
+    });
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.category_id) {
-      toast({ title: 'Name and Category are required', variant: 'destructive' });
+    if (!formData.name || formData.category_ids.length === 0) {
+      toast({ title: 'Name and at least one Category are required', variant: 'destructive' });
       setActiveTab('public');
       return;
     }
@@ -202,7 +223,9 @@ export default function AdminProducts({ user }) {
         description:  formData.description,
         price:        parseFloat(formData.price) || 0,
         is_free:      parseFloat(formData.price) === 0,
-        category_id:  formData.category_id,
+        // Primary category — kept for existing single-category displays
+        // (admin table column, product detail badge, etc).
+        category_id:  formData.category_ids[0],
         language:     formData.language,
         level:        formData.level,
         image_url:    formData.image_url,
@@ -223,6 +246,8 @@ export default function AdminProducts({ user }) {
       if (productId) {
         const { error: delivError } = await replaceProductDeliverables(productId, formData.deliverables);
         if (delivError) throw delivError;
+        const { error: catError } = await setProductCategories(productId, formData.category_ids);
+        if (catError) throw catError;
       }
 
       toast({ title: 'Product saved', className: 'border-amber-500 bg-zinc-900 text-white' });
@@ -555,19 +580,34 @@ export default function AdminProducts({ user }) {
                     <motion.div key="public" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
                       transition={{ duration: 0.15 }} className="p-6 space-y-5">
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Product Name <span className="text-red-400">*</span></label>
-                          <input type="text" name="name" required value={formData.name} onChange={onChange}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors" />
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Category <span className="text-red-400">*</span></label>
-                          <select name="category_id" required value={formData.category_id} onChange={onChange}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 appearance-none">
-                            <option value="" disabled>Select category</option>
-                            {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-                          </select>
+                      <div>
+                        <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Product Name <span className="text-red-400">*</span></label>
+                        <input type="text" name="name" required value={formData.name} onChange={onChange}
+                          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors" />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">
+                          Categories <span className="text-red-400">*</span>
+                          <span className="text-zinc-600 font-normal ml-1">(up to {MAX_CATEGORIES} — first one is the primary category)</span>
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {categories.map((c) => {
+                            const selected = formData.category_ids.includes(c.id);
+                            const disabled = !selected && formData.category_ids.length >= MAX_CATEGORIES;
+                            return (
+                              <button key={c.id} type="button" disabled={disabled} onClick={() => toggleCategory(c.id)}
+                                className={cn(
+                                  'px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors',
+                                  selected
+                                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+                                    : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white',
+                                  disabled && 'opacity-40 cursor-not-allowed'
+                                )}>
+                                {c.icon} {c.name}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -815,7 +855,7 @@ export default function AdminProducts({ user }) {
               <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
                   {/* Tab indicators */}
-                  <div className={cn('w-2 h-2 rounded-full', formData.name && formData.category_id ? 'bg-amber-400' : 'bg-zinc-700')} title="Public info" />
+                  <div className={cn('w-2 h-2 rounded-full', formData.name && formData.category_ids.length > 0 ? 'bg-amber-400' : 'bg-zinc-700')} title="Public info" />
                   <div className={cn('w-2 h-2 rounded-full', formData.deliverables.length > 0 ? 'bg-purple-400' : 'bg-zinc-700')} title="Content links" />
                   <span className="text-[10px] text-zinc-600 ml-1">
                     {formData.name ? `"${formData.name.slice(0, 20)}${formData.name.length > 20 ? '...' : ''}"` : 'Unsaved product'}
