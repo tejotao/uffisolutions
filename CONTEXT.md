@@ -1538,7 +1538,19 @@ Descoberto porque o usuário testou a Home em staging e viu "No products found f
 
 **Lição para o futuro**: qualquer migration que crie uma nova relação entre duas tabelas que já se relacionam de outro jeito precisa checar se algum `select(...)` existente embute a tabela de destino sem desambiguar o FK — o Supabase/PostgREST não escolhe sozinho quando há mais de um caminho possível.
 
-### ⏳ Pendente
-- Rodar a migration `sql/2026-07-07_product_categories.sql` no Supabase, se ainda não tiver sido feito (feita nesta sessão, confirmada pelo usuário).
-- Testar na staging: editar um produto marcando 2-3 categorias, conferir filtro/busca na Home, trocar idioma e ver o dropdown atualizar.
-- Fundir `staging` → `main` depois de validado (a correção do bug já está em produção; falta só a feature de filtro em si).
+### ✅ Testado na staging e publicado em produção
+Migration rodada, categorias múltiplas testadas no Admin, filtro/busca validados na Home. `staging` → `main` fundido via fast-forward (commit `e8a6b0f`).
+
+---
+
+## Sessão 07/07/2026 (cont.) — Home: hero simplificado + marquee de produtos
+
+**Motivação:** usuário achou os botões "Explore Products"/"Acessar Plataforma" do hero desnecessários e sugeriu uma faixa automática mostrando os produtos, mais discreta.
+
+### O que foi implementado
+- **`Header.jsx`** — link "Products" agora aparece no cabeçalho **desktop** também pra visitante (já existia só no menu mobile) — precisa disso já que o hero não vai mais ter botão apontando pro catálogo.
+- **`HomePage.jsx`** — removidos os botões do hero. No lugar, uma faixa contínua (marquee) com cards pequenos dos produtos, ordem embaralhada a cada carregamento, com a flag do idioma ao lado da miniatura (não em cima dela — primeira tentativa colocou a flag posicionada `absolute` sobre a miniatura, mas ficou cortada pelo `overflow-hidden` do container da imagem; corrigido movendo pra um elemento próprio ao lado).
+- Decisão consciente de **não** usar carrossel tradicional (um produto por vez, com setas) — esse padrão tem taxa de clique historicamente baixa; o marquee contínuo é só um teaser visual passivo, não compete com o filtro/busca abaixo dele.
+
+### Publicado
+`staging` (`e8a6b0f`) → aprovado pelo usuário → fundido em `main` via fast-forward, publicado em produção.
