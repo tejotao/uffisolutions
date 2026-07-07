@@ -1516,3 +1516,29 @@ Ao cruzar com o histórico deste arquivo, só restava genuinamente pendente:
 
 ### ⏳ Pendente
 - Confirmar visualmente na produção (pós-build da Vercel) que o badge aparece corretamente e que a lista de tickets do usuário carrega.
+
+---
+
+## Sessão 07/07/2026 — Categorias múltiplas por produto + filtro na Home
+
+**Motivação:** usuário perguntou se um produto poderia pertencer a mais de uma categoria (ex: "Personal Shopper" em Negócio Online + Serviços + Renda Extra) e pediu um filtro de categoria + busca na Home.
+
+### O que foi implementado
+- **Migration** `sql/2026-07-07_product_categories.sql` — tabela `product_categories` (N:N), RLS: leitura pública, escrita só admin (`is_admin_or_super()`). `products.category_id` continua existindo como categoria "primária" (compatibilidade com telas que só leem uma categoria); migration já faz o backfill.
+- **`catalogQueries.js`** — `getCategoryIdsForProduct(s)`, `setProductCategories()`.
+- **`AdminProducts.jsx`** — seletor de categoria virou chips de múltipla escolha (até 3, a primeira marcada vira a "primária").
+- **`HomePage.jsx`** — campo de busca visível + dropdown de categoria acima da grade de produtos, só na Home (por escopo, não em `/products`). Nomes de categoria trocam de idioma instantaneamente (categorias já carregam as 4 traduções de uma vez, sem refetch).
+
+### 🔴 Incidente em produção — causado por esta migration
+A migration criou um **segundo caminho de relacionamento** entre `products` e `categories` (o FK direto `products.category_id` já existente + o novo N:N via `product_categories`). O PostgREST (camada de API do Supabase) passou a rejeitar qualquer query que fizesse `categories(id, slug, color, icon)` embutido dentro de `products` com erro `PGRST201` ("more than one relationship was found") — **isso derrubou a listagem de produtos (Home, Products, ProductDetail) tanto em staging quanto em produção**, já que a migration foi rodada no banco compartilhado entre os dois ambientes.
+
+Descoberto porque o usuário testou a Home em staging e viu "No products found for these filters" mesmo com todos os filtros neutros. Confirmado via `curl` direto na API REST do Supabase (mesma anon key usada em produção) que a query dava erro.
+
+**Corrigido**: as 3 queries afetadas (`fetchAllProducts`, `fetchAllProductsAllLanguages`, `fetchProductsByCategory`) agora desambiguam explicitamente qual relacionamento embutir: `categories!products_category_id_fkey(id, slug, color, icon)` em vez de `categories(id, slug, color, icon)`. Testado via `curl` antes de publicar. **Publicado direto em `main`/produção com urgência** (commit `3df529d`), depois sincronizado em `staging` via merge (`1f3c596`).
+
+**Lição para o futuro**: qualquer migration que crie uma nova relação entre duas tabelas que já se relacionam de outro jeito precisa checar se algum `select(...)` existente embute a tabela de destino sem desambiguar o FK — o Supabase/PostgREST não escolhe sozinho quando há mais de um caminho possível.
+
+### ⏳ Pendente
+- Rodar a migration `sql/2026-07-07_product_categories.sql` no Supabase, se ainda não tiver sido feito (feita nesta sessão, confirmada pelo usuário).
+- Testar na staging: editar um produto marcando 2-3 categorias, conferir filtro/busca na Home, trocar idioma e ver o dropdown atualizar.
+- Fundir `staging` → `main` depois de validado (a correção do bug já está em produção; falta só a feature de filtro em si).
