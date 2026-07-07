@@ -26,6 +26,7 @@ const Header = ({
   onSearchChange,
   onShowAllProducts,
   showAllActive = false,
+  onLanguageSelect,
   isAdminPage = false,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -132,7 +133,7 @@ const Header = ({
                     </button>
                   </div>
 
-                  <LanguageSwitcher showAllActive={showAllActive} onShowAllProducts={onShowAllProducts} />
+                  <LanguageSwitcher showAllActive={showAllActive} onShowAllProducts={onShowAllProducts} onLanguageSelect={onLanguageSelect} />
                 </>
               )}
 
@@ -275,6 +276,10 @@ const Header = ({
                         showAllActive={showAllActive}
                         onShowAllProducts={() => {
                           onShowAllProducts?.();
+                          setMobileMenuOpen(false);
+                        }}
+                        onLanguageSelect={(code) => {
+                          onLanguageSelect?.(code);
                           setMobileMenuOpen(false);
                         }}
                       />

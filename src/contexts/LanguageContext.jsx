@@ -1,10 +1,13 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { getTranslation } from '@/lib/translations';
 
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
+  // Always starts in English on a fresh page load — deliberately not
+  // restored from a previous session, so every first read of any page
+  // has a consistent, predictable starting language.
   const [language, setLanguage] = useState('en');
   const [userChangedLanguage, setUserChangedLanguage] = useState(false);
 
@@ -15,17 +18,9 @@ export const LanguageProvider = ({ children }) => {
     { code: 'it', name: 'Italiano', flag: '🇮🇹' }
   ];
 
-  useEffect(() => {
-    const savedLang = localStorage.getItem('app-language');
-    if (savedLang) {
-      setLanguage(savedLang);
-    }
-  }, []);
-
   const changeLanguage = (lang) => {
     setLanguage(lang);
     setUserChangedLanguage(true);
-    localStorage.setItem('app-language', lang);
   };
 
   const t = (key) => {

@@ -3,7 +3,7 @@ import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
-export default function LanguageSwitcher({ className, showAllActive = false, onShowAllProducts = null }) {
+export default function LanguageSwitcher({ className, showAllActive = false, onShowAllProducts = null, onLanguageSelect = null }) {
   const { language, changeLanguage, availableLanguages } = useLanguage();
 
   return (
@@ -29,7 +29,7 @@ export default function LanguageSwitcher({ className, showAllActive = false, onS
       {availableLanguages.map(lang => (
         <button
           key={lang.code}
-          onClick={() => changeLanguage(lang.code)}
+          onClick={() => { changeLanguage(lang.code); onLanguageSelect?.(lang.code); }}
           className={cn(
             "flex items-center justify-center w-10 h-10 rounded-lg text-2xl transition-all duration-200",
             (!showAllActive && language === lang.code)
