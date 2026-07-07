@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { fetchAllProducts } from '@/lib/catalogQueries';
@@ -23,6 +23,17 @@ export default function ProductDetail({ user }) {
   const [isFavorite, setIsFavorite]     = useState(false);
   const [hasAccess, setHasAccess]       = useState(false);
   const [isGranting, setIsGranting]     = useState(false);
+
+  // A product page is for one specific language variant — switching the
+  // site language here would leave stale content and mismatched UI (e.g. an
+  // Italian product page suddenly wrapped in Portuguese buttons). Instead,
+  // send the visitor to the catalog, already filtered to the new language.
+  const initialLanguageRef = useRef(language);
+  useEffect(() => {
+    if (language !== initialLanguageRef.current) {
+      navigate('/products');
+    }
+  }, [language, navigate]);
 
   useEffect(() => {
     const loadProduct = async () => {
