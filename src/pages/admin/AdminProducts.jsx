@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Edit2, Trash2, X, Search, Package, Star, Check, Filter,
   AlertTriangle, Globe, FileText, Video, ExternalLink, HardDrive,
-  Lock, ChevronRight, Eye, Loader2, Image, Music,
+  Lock, ChevronRight, ChevronDown, Eye, Loader2, Image, Music,
+  Layout, ListChecks, Sparkles, ShieldCheck, HelpCircle, MessageSquare,
 } from 'lucide-react';
 import {
   fetchAllProductsAllLanguages, fetchAllCategories, createProduct, updateProduct, deleteProduct,
@@ -63,6 +64,176 @@ const getLanguageFlag = (lang) => {
   return '🌐';
 };
 
+const DEFAULT_GUARANTEE_TEXT =
+  'Oferecemos garantia de 14 dias conforme o Consumer Contracts Regulations 2013 (UK). ' +
+  'Se não estiver satisfeito, devolveremos 100% do valor pago sem perguntas.';
+
+const emptySection     = () => ({ title: '', icon: '🚀', description: '', bullets: [] });
+const emptyFaqItem     = () => ({ question: '', answer: '' });
+const emptyTestimonial = () => ({ name: '', text: '', rating: 5 });
+
+// ─── Landing-page editor sub-components ────────────────────────────────────────
+// Small, self-contained list editors shared by the "Landing Page" tab below.
+// They only ever talk to their parent through `items` + `onChange`, so they
+// stay agnostic of where in formData they're plugged in.
+
+function StringListEditor({ items, onChange, placeholder, addLabel }) {
+  const update = (idx, value) => onChange(items.map((it, i) => (i === idx ? value : it)));
+  const add    = () => onChange([...items, '']);
+  const remove = (idx) => onChange(items.filter((_, i) => i !== idx));
+  return (
+    <div className="space-y-2">
+      {items.map((item, idx) => (
+        <div key={idx} className="flex gap-2">
+          <input type="text" value={item} placeholder={placeholder} onChange={(e) => update(idx, e.target.value)}
+            className="flex-grow bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
+          <button type="button" onClick={() => remove(idx)}
+            className="p-2 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={add}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-zinc-700 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 transition-all text-xs font-bold">
+        <Plus size={14} /> {addLabel}
+      </button>
+    </div>
+  );
+}
+
+function SectionsEditor({ sections, onChange }) {
+  const [openIdx, setOpenIdx] = useState(null);
+  const update  = (idx, field, value) => onChange(sections.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
+  const add     = () => { onChange([...sections, emptySection()]); setOpenIdx(sections.length); };
+  const remove  = (idx) => onChange(sections.filter((_, i) => i !== idx));
+
+  return (
+    <div className="space-y-3">
+      {sections.length === 0 && (
+        <div className="text-center py-6 border border-dashed border-zinc-800 rounded-xl text-zinc-600 text-xs">
+          No sections yet. Add a phase/module of the product below.
+        </div>
+      )}
+      {sections.map((s, idx) => {
+        const isOpen = openIdx === idx;
+        return (
+          <div key={idx} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 p-3">
+              <input type="text" value={s.icon} onChange={(e) => update(idx, 'icon', e.target.value)}
+                maxLength={4} placeholder="🚀"
+                className="w-12 shrink-0 text-center bg-zinc-950 border border-zinc-800 rounded-lg py-2 text-lg focus:outline-none focus:border-amber-500" />
+              <input type="text" value={s.title} onChange={(e) => update(idx, 'title', e.target.value)}
+                placeholder="Section title — e.g. Phase 1: Foundations"
+                className="flex-grow bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 placeholder-zinc-700" />
+              <button type="button" onClick={() => setOpenIdx(isOpen ? null : idx)}
+                className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0">
+                {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </button>
+              <button type="button" onClick={() => remove(idx)}
+                className="p-2 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0">
+                <Trash2 size={14} />
+              </button>
+            </div>
+            {isOpen && (
+              <div className="px-3 pb-3 space-y-3 border-t border-zinc-800 pt-3">
+                <textarea rows="2" value={s.description} onChange={(e) => update(idx, 'description', e.target.value)}
+                  placeholder="Short description of this section..."
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 resize-none placeholder-zinc-700" />
+                <div>
+                  <label className="text-[10px] font-semibold text-zinc-500 mb-1.5 block uppercase tracking-wider">Bullets</label>
+                  <StringListEditor items={s.bullets} onChange={(bullets) => update(idx, 'bullets', bullets)}
+                    placeholder="Bullet point..." addLabel="Add bullet" />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button type="button" onClick={add}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-zinc-700 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 transition-all text-xs font-bold">
+        <Plus size={14} /> Add Section
+      </button>
+    </div>
+  );
+}
+
+function FaqEditor({ faq, onChange }) {
+  const update = (idx, field, value) => onChange(faq.map((f, i) => (i === idx ? { ...f, [field]: value } : f)));
+  const add    = () => onChange([...faq, emptyFaqItem()]);
+  const remove = (idx) => onChange(faq.filter((_, i) => i !== idx));
+  return (
+    <div className="space-y-3">
+      {faq.length === 0 && (
+        <div className="text-center py-6 border border-dashed border-zinc-800 rounded-xl text-zinc-600 text-xs">
+          No questions yet.
+        </div>
+      )}
+      {faq.map((f, idx) => (
+        <div key={idx} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <input type="text" value={f.question} onChange={(e) => update(idx, 'question', e.target.value)}
+              placeholder="Question..."
+              className="flex-grow bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:border-amber-500 placeholder-zinc-700" />
+            <button type="button" onClick={() => remove(idx)}
+              className="p-2 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0">
+              <Trash2 size={14} />
+            </button>
+          </div>
+          <textarea rows="2" value={f.answer} onChange={(e) => update(idx, 'answer', e.target.value)}
+            placeholder="Answer..."
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 resize-none placeholder-zinc-700" />
+        </div>
+      ))}
+      <button type="button" onClick={add}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-zinc-700 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 transition-all text-xs font-bold">
+        <Plus size={14} /> Add Question
+      </button>
+    </div>
+  );
+}
+
+function TestimonialsEditor({ testimonials, onChange }) {
+  const update = (idx, field, value) => onChange(testimonials.map((t, i) => (i === idx ? { ...t, [field]: value } : t)));
+  const add    = () => onChange([...testimonials, emptyTestimonial()]);
+  const remove = (idx) => onChange(testimonials.filter((_, i) => i !== idx));
+  return (
+    <div className="space-y-3">
+      {testimonials.length === 0 && (
+        <div className="text-center py-6 border border-dashed border-zinc-800 rounded-xl text-zinc-600 text-xs">
+          No testimonials yet.
+        </div>
+      )}
+      {testimonials.map((t, idx) => (
+        <div key={idx} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <input type="text" value={t.name} onChange={(e) => update(idx, 'name', e.target.value)}
+              placeholder="Name — e.g. Sofia M."
+              className="flex-grow bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:border-amber-500 placeholder-zinc-700" />
+            <div className="flex items-center gap-0.5 shrink-0">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} type="button" onClick={() => update(idx, 'rating', n)} className="p-0.5">
+                  <Star size={14} className={n <= (t.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-zinc-700'} />
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => remove(idx)}
+              className="p-2 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0">
+              <Trash2 size={14} />
+            </button>
+          </div>
+          <textarea rows="2" value={t.text} onChange={(e) => update(idx, 'text', e.target.value)}
+            placeholder="What did they say?"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 resize-none placeholder-zinc-700" />
+        </div>
+      ))}
+      <button type="button" onClick={add}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-zinc-700 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 transition-all text-xs font-bold">
+        <Plus size={14} /> Add Testimonial
+      </button>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AdminProducts({ user }) {
@@ -77,7 +248,7 @@ export default function AdminProducts({ user }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId]     = useState(null);
   const [isSaving, setIsSaving]       = useState(false);
-  const [activeTab, setActiveTab]     = useState('public'); // 'public' | 'content'
+  const [activeTab, setActiveTab]     = useState('public'); // 'public' | 'content' | 'landing'
   const [deliverablesMap, setDeliverablesMap] = useState(new Map()); // productId -> deliverable[]
   const [loadingDeliverables, setLoadingDeliverables] = useState(false);
   const [accessCounts, setAccessCounts] = useState(new Map()); // productId -> { active, total }
@@ -90,6 +261,10 @@ export default function AdminProducts({ user }) {
     // ── Tab 2: Content ──
     stripe_link: '', access_duration_days: '',
     deliverables: [], // [{ type, label, url }]
+    // ── Tab 3: Landing Page ──
+    tagline: '', hero_description: '', target_audience: '', badge_text: '',
+    includes: [], what_you_learn: [], sections: [], faq: [], testimonials: [],
+    guarantee_days: 14, guarantee_text: DEFAULT_GUARANTEE_TEXT,
   });
 
   const { toast } = useToast();
@@ -160,6 +335,17 @@ export default function AdminProducts({ user }) {
           id: d.id, type: d.type, provider: d.provider || '', label: d.label || '', url: d.url,
           go_unlisted_at: d.go_unlisted_at || '',
         })),
+        tagline:          product.tagline || '',
+        hero_description: product.hero_description || '',
+        target_audience:  product.target_audience || '',
+        badge_text:       product.badge_text || '',
+        includes:         product.includes || [],
+        what_you_learn:   product.what_you_learn || [],
+        sections:         product.sections || [],
+        faq:              product.faq || [],
+        testimonials:     product.testimonials || [],
+        guarantee_days:   product.guarantee_days ?? 14,
+        guarantee_text:   product.guarantee_text || DEFAULT_GUARANTEE_TEXT,
       });
       setIsModalOpen(true);
       // Refresh in case the cached map/single category_id is stale
@@ -186,6 +372,9 @@ export default function AdminProducts({ user }) {
         language: 'pt', level: 'beginner', image_url: '',
         is_featured: false, active: true,
         stripe_link: '', access_duration_days: '', deliverables: [],
+        tagline: '', hero_description: '', target_audience: '', badge_text: '',
+        includes: [], what_you_learn: [], sections: [], faq: [], testimonials: [],
+        guarantee_days: 14, guarantee_text: DEFAULT_GUARANTEE_TEXT,
       });
       setIsModalOpen(true);
     }
@@ -233,6 +422,19 @@ export default function AdminProducts({ user }) {
         active:       formData.active,
         stripe_link:  formData.stripe_link || null,
         access_duration_days: formData.access_duration_days ? parseInt(formData.access_duration_days, 10) : null,
+        // Landing page — optional fields; empty lists/strings are stored as
+        // null so the public page's "hide empty sections" checks stay simple.
+        tagline:           formData.tagline || null,
+        hero_description:  formData.hero_description || null,
+        target_audience:   formData.target_audience || null,
+        badge_text:        formData.badge_text || null,
+        includes:          formData.includes.filter((x) => x.trim()).length ? formData.includes.filter((x) => x.trim()) : null,
+        what_you_learn:    formData.what_you_learn.filter((x) => x.trim()).length ? formData.what_you_learn.filter((x) => x.trim()) : null,
+        sections:          formData.sections.length ? formData.sections : null,
+        faq:               formData.faq.filter((f) => f.question.trim()).length ? formData.faq.filter((f) => f.question.trim()) : null,
+        testimonials:      formData.testimonials.filter((t) => t.name.trim()).length ? formData.testimonials.filter((t) => t.name.trim()) : null,
+        guarantee_days:    formData.guarantee_days ? parseInt(formData.guarantee_days, 10) : 14,
+        guarantee_text:    formData.guarantee_text || null,
       };
       // Slug is only generated on create — editing a product must never change
       // its URL (would break already-shared links / SEO).
@@ -569,6 +771,19 @@ export default function AdminProducts({ user }) {
                     </span>
                   )}
                 </button>
+
+                {/* Tab 3 — Landing Page */}
+                <button
+                  onClick={() => setActiveTab('landing')}
+                  className={cn(
+                    'flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 flex-1 justify-center',
+                    activeTab === 'landing'
+                      ? 'text-sky-400 border-sky-500 bg-sky-500/5'
+                      : 'text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-zinc-800/40'
+                  )}
+                >
+                  <Layout size={14} /> Landing Page
+                </button>
               </div>
 
               {/* ── Form body ── */}
@@ -848,6 +1063,125 @@ export default function AdminProducts({ user }) {
                       )}
                     </motion.div>
                   )}
+
+                  {/* ══ TAB 3: LANDING PAGE ══ */}
+                  {activeTab === 'landing' && (
+                    <motion.div key="landing" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}
+                      transition={{ duration: 0.15 }} className="p-6 space-y-8">
+
+                      <div className="flex items-center gap-2 px-3 py-2 bg-sky-500/8 border border-sky-500/20 rounded-xl">
+                        <Layout size={12} className="text-sky-400 shrink-0" />
+                        <p className="text-xs text-sky-300">
+                          Everything below is optional. The public page at <code>/products/{'{slug}'}</code> only shows the sections you fill in.
+                        </p>
+                      </div>
+
+                      {/* Hero */}
+                      <div className="space-y-4">
+                        <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Sparkles size={13} className="text-sky-400" /> Hero
+                        </h3>
+                        <div>
+                          <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Tagline</label>
+                          <input type="text" name="tagline" value={formData.tagline} onChange={onChange}
+                            placeholder="e.g. Learn to use the AI you already have"
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Hero Description</label>
+                          <textarea name="hero_description" rows="3" value={formData.hero_description} onChange={onChange}
+                            placeholder="Main paragraph shown at the top of the landing page..."
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors resize-none placeholder-zinc-700" />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Target Audience</label>
+                            <input type="text" name="target_audience" value={formData.target_audience} onChange={onChange}
+                              placeholder="Who is this for?"
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Badge Text</label>
+                            <input type="text" name="badge_text" value={formData.badge_text} onChange={onChange}
+                              placeholder="e.g. Bestseller, New, Exclusive"
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Includes */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <ListChecks size={13} className="text-sky-400" /> What's Included
+                        </h3>
+                        <StringListEditor items={formData.includes}
+                          onChange={(includes) => setFormData((p) => ({ ...p, includes }))}
+                          placeholder="e.g. PDF — 45 pages" addLabel="Add item" />
+                      </div>
+
+                      {/* What you learn */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Check size={13} className="text-sky-400" /> What You'll Learn / Receive
+                        </h3>
+                        <StringListEditor items={formData.what_you_learn}
+                          onChange={(what_you_learn) => setFormData((p) => ({ ...p, what_you_learn }))}
+                          placeholder="e.g. How to set up your first automation" addLabel="Add item" />
+                      </div>
+
+                      {/* Sections */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Layout size={13} className="text-sky-400" /> Phases / Sections
+                        </h3>
+                        <SectionsEditor sections={formData.sections}
+                          onChange={(sections) => setFormData((p) => ({ ...p, sections }))} />
+                      </div>
+
+                      {/* Guarantee */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <ShieldCheck size={13} className="text-sky-400" /> Guarantee
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                          <div>
+                            <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">Days</label>
+                            <input type="number" min="0" step="1" name="guarantee_days" value={formData.guarantee_days} onChange={onChange}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors" />
+                          </div>
+                          <div className="col-span-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="text-xs font-semibold text-zinc-400 block">Guarantee Text</label>
+                              <button type="button"
+                                onClick={() => setFormData((p) => ({ ...p, guarantee_text: DEFAULT_GUARANTEE_TEXT }))}
+                                className="text-[10px] font-bold text-amber-400 hover:text-amber-300">
+                                Use default UK text
+                              </button>
+                            </div>
+                            <textarea name="guarantee_text" rows="2" value={formData.guarantee_text} onChange={onChange}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors resize-none placeholder-zinc-700" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* FAQ */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <HelpCircle size={13} className="text-sky-400" /> FAQ
+                        </h3>
+                        <FaqEditor faq={formData.faq} onChange={(faq) => setFormData((p) => ({ ...p, faq }))} />
+                      </div>
+
+                      {/* Testimonials */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <MessageSquare size={13} className="text-sky-400" /> Testimonials
+                        </h3>
+                        <TestimonialsEditor testimonials={formData.testimonials}
+                          onChange={(testimonials) => setFormData((p) => ({ ...p, testimonials }))} />
+                      </div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </form>
 
@@ -857,6 +1191,7 @@ export default function AdminProducts({ user }) {
                   {/* Tab indicators */}
                   <div className={cn('w-2 h-2 rounded-full', formData.name && formData.category_ids.length > 0 ? 'bg-amber-400' : 'bg-zinc-700')} title="Public info" />
                   <div className={cn('w-2 h-2 rounded-full', formData.deliverables.length > 0 ? 'bg-purple-400' : 'bg-zinc-700')} title="Content links" />
+                  <div className={cn('w-2 h-2 rounded-full', (formData.tagline || formData.sections.length > 0 || formData.includes.length > 0) ? 'bg-sky-400' : 'bg-zinc-700')} title="Landing page" />
                   <span className="text-[10px] text-zinc-600 ml-1">
                     {formData.name ? `"${formData.name.slice(0, 20)}${formData.name.length > 20 ? '...' : ''}"` : 'Unsaved product'}
                   </span>

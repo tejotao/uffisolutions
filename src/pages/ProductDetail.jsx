@@ -1,7 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import {
+  Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle,
+  ShieldCheck, ChevronDown, Quote,
+} from 'lucide-react';
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, grantProductAccess } from '@/lib/accessQueries';
@@ -23,6 +27,12 @@ export default function ProductDetail({ user }) {
   const [isFavorite, setIsFavorite]     = useState(false);
   const [hasAccess, setHasAccess]       = useState(false);
   const [isGranting, setIsGranting]     = useState(false);
+  const [openFaqIdx, setOpenFaqIdx]     = useState(null);
+
+  // Translation strings that carry a "{days}" placeholder (guarantee copy) —
+  // getTranslation only does flat key lookup, so the interpolation happens here.
+  const tf = (key, vars = {}) =>
+    Object.entries(vars).reduce((str, [k, v]) => str.replaceAll(`{${k}}`, v), t(key));
 
   // A product page is for one specific language variant — switching the
   // site language here would leave stale content and mismatched UI (e.g. an
@@ -199,9 +209,61 @@ export default function ProductDetail({ user }) {
   }
 
   const isFree = product.is_free || parseFloat(product.price) === 0 || !product.price;
+  const guaranteeDays = product.guarantee_days ?? 14;
+
+  // Shared primary CTA — used both in the sidebar action card and the final
+  // CTA section, so the buy/access/free logic only lives in one place.
+  const renderCtaButton = (extraClassName = 'mb-4') => {
+    const base = `w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] ${extraClassName}`;
+    if (isFree) {
+      if (!user) {
+        return (
+          <button onClick={() => navigate('/register')} className={`${base} bg-[#10b981] hover:bg-[#059669] text-black`}>
+            🎁 Get Free Access
+          </button>
+        );
+      }
+      if (hasAccess) {
+        return (
+          <button onClick={openAccessModal} className={`${base} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
+            <Play size={22} className="fill-black" /> {t('detail.access')}
+          </button>
+        );
+      }
+      return (
+        <button onClick={handleFreeAccess} disabled={isGranting} className={`${base} bg-[#10b981] hover:bg-[#059669] text-black disabled:opacity-70`}>
+          {isGranting ? <Loader2 size={22} className="animate-spin" /> : '🎁 Get Free Access'}
+        </button>
+      );
+    }
+    if (user && hasAccess) {
+      return (
+        <button onClick={openAccessModal} className={`${base} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
+          <Play size={22} className="fill-black" /> {t('detail.access')}
+        </button>
+      );
+    }
+    return (
+      <button onClick={handleBuy} className={`${base} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
+        <ShoppingCart size={24} /> {t('detail.buy_now')} — £{Number(product.price).toFixed(2)}
+      </button>
+    );
+  };
+
+  const pageTitle = `${product.title || product.name} — UffiSolutions`;
+  const pageDescription = (product.hero_description || product.description || '').slice(0, 160);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans selection:bg-[#f59e0b]/30">
+      <Helmet>
+        <title>{pageTitle}</title>
+        {pageDescription && <meta name="description" content={pageDescription} />}
+        <meta property="og:title" content={pageTitle} />
+        {pageDescription && <meta property="og:description" content={pageDescription} />}
+        <meta property="og:type" content="product" />
+        {product.image_url && <meta property="og:image" content={product.image_url} />}
+        <link rel="canonical" href={`https://uffisolutions.com/products/${product.slug || product.id}`} />
+      </Helmet>
       <Header user={user} isAdminPage={false} />
       
       <main className="flex-grow pt-24 pb-16">
@@ -223,7 +285,12 @@ export default function ProductDetail({ user }) {
               
               {/* Image & Main Info */}
               <div className="lg:col-span-7 flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-3 mb-6 flex-wrap">
+                  {product.badge_text && (
+                    <span className="px-3 py-1 bg-[#f59e0b] text-black rounded-lg text-sm font-black">
+                      {product.badge_text}
+                    </span>
+                  )}
                   <span className="text-3xl" title="Language">
                     {getLanguageFlag(product.language)}
                   </span>
@@ -239,15 +306,19 @@ export default function ProductDetail({ user }) {
                   )}
                 </div>
 
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-6 leading-[1.1] tracking-tight">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-4 leading-[1.1] tracking-tight">
                   {product.title || product.name}
                 </h1>
-                
+
+                {product.tagline && (
+                  <p className="text-xl text-[#f59e0b] font-semibold mb-6">{product.tagline}</p>
+                )}
+
                 <p className="text-lg text-gray-400 mb-8 leading-relaxed max-w-2xl">
-                  {product.description || t('detail.desc_unavailable')}
+                  {product.hero_description || product.description || t('detail.desc_unavailable')}
                 </p>
 
-                <div className="flex flex-wrap items-center gap-6 mt-auto">
+                <div className="flex flex-wrap items-center gap-6 mt-auto mb-6">
                   <div className="flex items-center gap-2 text-gray-300">
                     <Star className="text-[#f59e0b] fill-[#f59e0b]" size={20} />
                     <span className="font-bold text-white">{product.rating || '5.0'}</span>
@@ -262,6 +333,13 @@ export default function ProductDetail({ user }) {
                     <span>{product.duration || t('detail.lifetime')}</span>
                   </div>
                 </div>
+
+                {product.target_audience && (
+                  <div className="bg-[#141414] border border-[#2a2a2a] rounded-2xl p-5 max-w-2xl">
+                    <p className="text-xs font-bold text-[#f59e0b] uppercase tracking-wider mb-1.5">{t('detail.audience_title')}</p>
+                    <p className="text-gray-300 leading-relaxed">{product.target_audience}</p>
+                  </div>
+                )}
               </div>
 
               {/* Sidebar Action Card */}
@@ -304,47 +382,7 @@ export default function ProductDetail({ user }) {
                   </div>
 
                   {/* ── Action button — context-aware ── */}
-                  {isFree ? (
-                    !user ? (
-                      /* Guest + Free → register to get access */
-                      <button onClick={() => navigate('/register')}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#10b981] hover:bg-[#059669] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
-                        🎁 Get Free Access
-                      </button>
-                    ) : hasAccess ? (
-                      /* Logged in + has access → open modal */
-                      <button onClick={openAccessModal}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
-                        <Play size={22} className="fill-black" /> {t('detail.access')}
-                      </button>
-                    ) : (
-                      /* Logged in + free + no access yet → grant */
-                      <button onClick={handleFreeAccess} disabled={isGranting}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#10b981] hover:bg-[#059669] text-black hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 mb-4">
-                        {isGranting ? <Loader2 size={22} className="animate-spin" /> : '🎁 Get Free Access'}
-                      </button>
-                    )
-                  ) : (
-                    !user ? (
-                      /* Guest + Paid → buy */
-                      <button onClick={handleBuy}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
-                        <ShoppingCart size={24} /> {t('detail.buy_now')}
-                      </button>
-                    ) : hasAccess ? (
-                      /* Logged in + paid + has access → open modal */
-                      <button onClick={openAccessModal}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
-                        <Play size={22} className="fill-black" /> {t('detail.access')}
-                      </button>
-                    ) : (
-                      /* Logged in + paid + no access → buy */
-                      <button onClick={handleBuy}
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl bg-[#f59e0b] hover:bg-[#d97706] text-black hover:scale-[1.02] active:scale-[0.98] mb-4">
-                        <ShoppingCart size={24} /> {t('detail.buy_now')}
-                      </button>
-                    )
-                  )}
+                  {renderCtaButton()}
 
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">
                     <Users size={16} /> +1000 {t('detail.students')}
@@ -353,6 +391,155 @@ export default function ProductDetail({ user }) {
               </div>
 
             </div>
+          </div>
+        </section>
+
+        {/* What's Included */}
+        {Array.isArray(product.includes) && product.includes.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+            <h2 className="text-2xl font-black text-white mb-8 border-l-4 border-[#f59e0b] pl-4">
+              {t('detail.includes_title')}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {product.includes.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3 bg-[#141414] border border-[#2a2a2a] rounded-xl p-4">
+                  <CheckCircle size={20} className="text-[#f59e0b] shrink-0" />
+                  <span className="text-gray-300">{item}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Sections / Phases */}
+        {Array.isArray(product.sections) && product.sections.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+            <h2 className="text-2xl font-black text-white mb-8 border-l-4 border-[#f59e0b] pl-4">
+              {t('detail.sections_title')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {product.sections.map((section, idx) => (
+                <div key={idx} className="bg-[#141414] border border-[#2a2a2a] rounded-2xl p-6 hover:border-[#f59e0b]/40 transition-colors">
+                  <div className="flex items-center gap-3 mb-3">
+                    {section.icon && <span className="text-3xl">{section.icon}</span>}
+                    {section.title && <h3 className="text-lg font-bold text-white">{section.title}</h3>}
+                  </div>
+                  {section.description && (
+                    <p className="text-gray-400 mb-4 leading-relaxed">{section.description}</p>
+                  )}
+                  {Array.isArray(section.bullets) && section.bullets.length > 0 && (
+                    <ul className="space-y-2">
+                      {section.bullets.map((bullet, bi) => (
+                        <li key={bi} className="flex items-start gap-2 text-sm text-gray-300">
+                          <CheckCircle size={16} className="text-[#f59e0b] shrink-0 mt-0.5" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* What You'll Receive */}
+        {Array.isArray(product.what_you_learn) && product.what_you_learn.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+            <h2 className="text-2xl font-black text-white mb-8 border-l-4 border-[#f59e0b] pl-4">
+              {t('detail.receive_title')}
+            </h2>
+            <div className="bg-[#141414] border border-[#2a2a2a] rounded-2xl p-6 lg:p-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {product.what_you_learn.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <CheckCircle size={20} className="text-green-500 shrink-0 mt-0.5" />
+                    <span className="text-gray-200">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Guarantee */}
+        {product.guarantee_text && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+            <div className="bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/30 rounded-3xl p-8 lg:p-10 flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+              <ShieldCheck size={64} className="text-green-500 shrink-0" />
+              <div>
+                <h2 className="text-2xl font-black text-white mb-2">{tf('detail.guarantee_heading', { days: guaranteeDays })}</h2>
+                <p className="text-gray-300 leading-relaxed mb-2">{product.guarantee_text}</p>
+                <p className="text-green-400 font-bold text-sm">{t('detail.guarantee_no_questions')}</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* FAQ */}
+        {Array.isArray(product.faq) && product.faq.length > 0 && (
+          <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+            <h2 className="text-2xl font-black text-white mb-8 border-l-4 border-[#f59e0b] pl-4">
+              {t('detail.faq_title')}
+            </h2>
+            <div className="space-y-3">
+              {product.faq.map((item, idx) => {
+                const isOpen = openFaqIdx === idx;
+                return (
+                  <div key={idx} className="bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden">
+                    <button type="button" onClick={() => setOpenFaqIdx(isOpen ? null : idx)}
+                      className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left">
+                      <span className="font-semibold text-white">{item.question}</span>
+                      <ChevronDown size={18} className={`text-[#f59e0b] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isOpen && (
+                      <div className="px-5 pb-4 text-gray-400 leading-relaxed">{item.answer}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Testimonials */}
+        {Array.isArray(product.testimonials) && product.testimonials.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+            <h2 className="text-2xl font-black text-white mb-8 border-l-4 border-[#f59e0b] pl-4">
+              {t('detail.testimonials_title')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {product.testimonials.map((item, idx) => (
+                <div key={idx} className="bg-[#141414] border border-[#2a2a2a] rounded-2xl p-6 flex flex-col">
+                  <Quote size={24} className="text-[#f59e0b]/40 mb-3" />
+                  <p className="text-gray-300 leading-relaxed mb-4 flex-grow">{item.text}</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-[#2a2a2a]">
+                    <span className="font-bold text-white text-sm">{item.name}</span>
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, si) => (
+                        <Star key={si} size={14} className={si < (item.rating || 5) ? 'text-[#f59e0b] fill-[#f59e0b]' : 'text-gray-700'} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Final CTA */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+          <div className="bg-gradient-to-b from-[#141414] to-[#0a0a0a] border border-[#2a2a2a] rounded-3xl p-8 lg:p-12 text-center">
+            <h2 className="text-3xl font-black text-white mb-3">{t('detail.cta_final_heading')}</h2>
+            <p className="text-gray-400 mb-8">
+              {isFree ? t('product.free') : `£${Number(product.price).toFixed(2)}`}
+            </p>
+            <div className="max-w-md mx-auto">
+              {renderCtaButton('')}
+            </div>
+            {product.guarantee_text && (
+              <p className="text-sm text-gray-500 mt-4">{tf('detail.cta_final_guarantee', { days: guaranteeDays })}</p>
+            )}
           </div>
         </section>
 
