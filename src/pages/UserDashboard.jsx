@@ -124,7 +124,7 @@ const ProductCard = ({ product, onFallback, index = 0 }) => {
       <div className="aspect-video relative overflow-hidden flex items-center justify-center bg-zinc-950">
         {product.image_url || product.imageUrl ? (
           <img
-            src={optimizedImageUrl(product.image_url || product.imageUrl, { width: 560 })}
+            src={optimizedImageUrl(product.image_url || product.imageUrl, { width: 560, height: 315 })}
             alt={product.title || product.name}
             className="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-700"
           />

@@ -874,7 +874,7 @@ export default function AdminProducts({ user }) {
                             placeholder="https://..."
                             className="flex-grow bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
                           {formData.image_url && (
-                            <img src={optimizedImageUrl(formData.image_url, { width: 100 })} alt="preview"
+                            <img src={optimizedImageUrl(formData.image_url, { width: 100, height: 100 })} alt="preview"
                               className="w-12 h-12 rounded-xl object-cover border border-zinc-700 shrink-0"
                               onError={(e) => { e.target.style.display = 'none'; }} />
                           )}

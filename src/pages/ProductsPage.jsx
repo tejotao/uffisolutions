@@ -155,7 +155,7 @@ export default function ProductsPage({ user }) {
                             </div>
                           )}
                           {product.image_url ? (
-                            <img src={optimizedImageUrl(product.image_url, { width: 560 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={optimizedImageUrl(product.image_url, { width: 560, height: 315 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
                               <Play size={32} className="text-[#2a2a2a]" />

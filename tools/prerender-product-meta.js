@@ -65,14 +65,18 @@ function replaceTag(html, regex, replacement) {
 // reimplemented locally rather than importing that module: it reads
 // `import.meta.env.VITE_SUPABASE_URL`, a Vite-only feature that doesn't
 // exist under plain `node` (this script's runtime) and would throw on
-// import. 1200px matches Google's structured-data image-size guidance for
-// Product rich results.
+// import. 1200x675 (16:9) matches Google's structured-data image-size
+// guidance for Product rich results. height is required, not optional —
+// Supabase's transform endpoint doesn't scale height proportionally when
+// only width is given (confirmed by comparing real output dimensions: a
+// 2752x1536 source came back 560x1536 with just width=560 set — width
+// changed, height didn't, wrecking the aspect ratio).
 function schemaImageUrl(rawUrl) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
   const rawPrefix = `${supabaseUrl}/storage/v1/object/public/`;
   if (!rawUrl || !supabaseUrl || !rawUrl.startsWith(rawPrefix)) return rawUrl;
   const renderPrefix = `${supabaseUrl}/storage/v1/render/image/public/`;
-  return `${rawUrl.replace(rawPrefix, renderPrefix)}?width=1200&quality=80`;
+  return `${rawUrl.replace(rawPrefix, renderPrefix)}?width=1200&height=675&resize=cover&quality=80`;
 }
 
 function buildProductHtml(baseHtml, product, category) {

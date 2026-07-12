@@ -159,7 +159,7 @@ export default function LibraryPage({ user }) {
                 style={{ borderColor: `rgba(${catRgb},0.3)` }}
               >
                 {product.image_url ? (
-                  <img src={optimizedImageUrl(product.image_url, { width: 180 })} alt={product.title || product.name} className="w-full h-full object-cover" />
+                  <img src={optimizedImageUrl(product.image_url, { width: 180, height: 180 })} alt={product.title || product.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-2xl" style={{ background: `rgba(${catRgb},0.12)` }}>
                     {catIcon}

@@ -276,7 +276,7 @@ export default function ProductDetail({ user }) {
   const ogLocale = getOgLocale(product.language);
 
   const productSchema = buildProductSchema({
-    product, categoryName, siteUrl: SITE_URL, imageUrl: optimizedImageUrl(product.image_url, { width: 1200, quality: 80 }),
+    product, categoryName, siteUrl: SITE_URL, imageUrl: optimizedImageUrl(product.image_url, { width: 1200, height: 675, quality: 80 }),
   });
   const faqSchema = buildFaqSchema(product.faq);
   const breadcrumbSchema = buildBreadcrumbSchema({
@@ -383,7 +383,7 @@ export default function ProductDetail({ user }) {
                       </div>
                     )}
                     {product.image_url ? (
-                      <img src={optimizedImageUrl(product.image_url, { width: 900 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <img src={optimizedImageUrl(product.image_url, { width: 900, height: 506 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[#2a2a2a] group-hover:scale-105 transition-transform duration-700">
                         <Play size={64} className="opacity-20" />
@@ -591,7 +591,7 @@ export default function ProductDetail({ user }) {
                         </div>
                       )}
                       {rp.image_url ? (
-                        <img src={optimizedImageUrl(rp.image_url, { width: 560 })} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={optimizedImageUrl(rp.image_url, { width: 560, height: 315 })} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
                           <Play size={32} className="text-[#2a2a2a]" />
