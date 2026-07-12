@@ -1577,3 +1577,57 @@ Achado interessante: `HomePage.jsx` e `ProductsPage.jsx` **já passavam** uma pr
 
 ### Incidente recorrente — travamento de git na pasta local (mesma classe já documentada em 03/07)
 Durante esta sessão, `git fetch`/`git status`/`git commit` voltaram a travar repetidamente na pasta local do projeto (mesmo padrão: baixo uso de CPU, sem progresso real, às vezes deixando `.git/index.lock` órfão). Contornado do mesmo jeito de sempre: clonando a branch `staging` numa pasta temporária limpa, aplicando as mudanças lá, e publicando de lá — sem tocar no repositório local travado. Os arquivos de código na pasta original do usuário continuam corretos (foram editados diretamente ali antes do git travar); é só o histórico do git local que fica temporariamente desatualizado/instável. Recomendado reiniciar o VS Code se o problema persistir na próxima sessão.
+
+---
+
+## Sessão 09-11/07/2026 — Landing page completa por produto (`/products/:slug`)
+
+**Motivação:** tráfego pago ia direto pra página de produto, mas ela só tinha título/descrição/preço — sem seções de venda (garantia, FAQ, depoimentos, o que está incluído).
+
+### Implementado
+- **SQL** (`sql/2026-07-11_product_landing_page.sql`) — colunas novas em `products`: `tagline`, `hero_description`, `what_you_learn`, `sections`, `includes`, `guarantee_days`, `guarantee_text`, `target_audience`, `faq`, `badge_text`, `testimonials` (todas opcionais/JSONB onde aplicável).
+- **Admin** (`AdminProducts.jsx`) — 3ª aba "Landing Page" no modal, com editores dinâmicos reutilizáveis (lista simples, seções expansíveis com bullets, FAQ, depoimentos com estrelas).
+- **Página pública** (`ProductDetail.jsx`) — seções Hero → Includes → Sections/Fases → What You'll Learn → Garantia → FAQ (accordion) → Depoimentos → CTA final, cada uma só aparece se o campo tiver dado. CTA de compra/acesso unificado numa única função (`renderCtaButton`) reaproveitada na sidebar e no CTA final.
+- Chaves de tradução novas em `translations.js` (en/pt/es/it) pras seções novas.
+- `tools/generate-sitemap.js` (novo) — roda no `npm run build`, gera `sitemap.xml` com todos os slugs de produtos ativos direto do Supabase.
+- Removidos "+1000 students enrolled" e "5.0 (120+ reviews)" do `ProductDetail.jsx` — eram números fixos, não reais.
+
+### Publicado
+`staging` → `main`, verificado em produção.
+
+---
+
+## Sessão 12/07/2026 — Auditoria UX/marketing (5 prioridades) + limpeza técnica
+
+**Motivação:** usuário trouxe uma auditoria de UX/marketing com 5 prioridades — tráfego pago cai direto em páginas de produto, e o diagnóstico era que o compartilhamento/SEO dessas páginas não refletia o produto real.
+
+### Prioridade 1 (crítico) — Meta tags dinâmicas por produto
+**Causa raiz:** este é um SPA 100% client-side, sem SSR — `index.html` tem um único bloco estático de `<title>`/`og:*`/`twitter:*`, igual pra toda rota. O `react-helmet` já usado em `ProductDetail.jsx` só edita o DOM depois que o React sobe no navegador — invisível pra bots de preview (WhatsApp/Facebook/LinkedIn/Twitter), que buscam o HTML cru e majoritariamente não rodam JS. Todo link de anúncio pra um produto sempre mostrava o preview da home genérica.
+
+**Fix:** `tools/prerender-product-meta.js` (novo) roda depois do `vite build` e escreve um `dist/products/<slug>/index.html` por produto ativo — cópia do `index.html` real (mesmos scripts com hash, então o SPA sobe normal) com `title`/`description`/`og:*`/`twitter:*`/canonical trocados pelos dados reais do produto. Arquivo estático tem prioridade sobre o rewrite catch-all do `vercel.json` sem precisar mexer nele — confirmado por `curl` direto em produção antes de considerar resolvido (não dava pra testar isso na Preview, protegida por login do Vercel).
+
+### Prioridade 2 — Consistência de idioma na Home deslogada
+Hero já era inglês por padrão (decisão de sessão anterior), mas `index.html` e o `<Helmet>` do `App.jsx` tinham **duas versões diferentes** do texto, ambas em português — nenhuma batendo com o hero nem entre si. Alinhadas as três pro mesmo texto em inglês. Marquee de produtos mantido como está (ordem aleatória + bandeira por card é decisão deliberada de sessão anterior, não bug — usuário confirmou manter).
+
+### Prioridade 3 — Sinais de confiança falsos
+Já resolvido na sessão anterior (remoção do "+1000 students"/"5.0 reviews" do `ProductDetail.jsx`). Confirmado que não sobrou em nenhum outro lugar (cards, home, catálogo).
+
+### Prioridade 4 — Título/descrição da Home
+Trocado o texto genérico ("Digital knowledge products and solutions...") por algo específico sobre o catálogo real (compras/importação/viagem/IA, 4 idiomas) — 3 opções mostradas, usuário escolheu uma antes de aplicar.
+
+### Prioridade 5 — Lighthouse (accessibility/SEO/performance)
+Rodado via Chrome DevTools MCP direto em produção. Accessibility 91/90 → **100/100** (home/produto): contraste de cor insuficiente no rodapé e no preço riscado (`text-gray-500` → `text-gray-400`), `<select>` de categoria e botão de favoritar sem `aria-label`. Favicon trocado do PNG genérico externo (`horizons-cdn.hostinger.com`) pro SVG da marca que já existia em `public/favicon.svg` e nunca era referenciado.
+
+**Achado não corrigido (reportado, pendente de decisão então aprovada em seguida):** trace de performance mostrou imagens de capa de produto baixadas 2-8x maiores que o exibido, cache de só 1h — ~15.6MB desperdiçados por carregamento.
+
+### Follow-up aprovado — Otimização de imagens via Supabase Storage
+Confirmado por `curl` (antes de escrever código) que o Storage deste projeto suporta o endpoint de transformação on-the-fly (`/storage/v1/render/image/public/...?width=X&quality=Y`) — mesmo arquivo caiu de 7.3MB pra 78KB com negociação de WebP. `src/lib/imageUrl.js` (novo) reescreve a URL de exibição sem tocar em nenhum arquivo armazenado; aplicado em todo `<img>` de produto (home, produto, catálogo, biblioteca, dashboard, admin). Resultado medido em produção: 15.6MB → 401.9KB de imagem desperdiçada, 12.5MB → 147.2KB de cache.
+
+### Follow-up aprovado — `llms.txt` / Agentic Browsing (Lighthouse) 33 → 100
+Achado mais profundo do que o esperado: `extractRoutes()` em `tools/generate-llms.js` usava regex que **nunca** casou nenhuma rota desde que o script existe (parava no primeiro `>`, que fica dentro do componente aninhado em `element={<Componente/>}` — toda URL no `llms.txt` sempre veio do fallback "adivinhado", nunca da rota real). Regex não dava conta de forma confiável (rotas envolvidas em `<ProtectedRoute>`/`<AdminRoute>`, ternários tipo `user ? <Navigate/> : <HomePage/>`) — reescrito com parsing AST de verdade (`@babel/parser`/`@babel/traverse`, já dependências do projeto, mesmo padrão de `plugins/utils/ast-utils.js`). Faltava também o H1 exigido pelo spec do llmstxt.org — adicionado.
+
+### Verificação
+Cada prioridade testada com Lighthouse real (Chrome DevTools MCP) contra produção antes de considerar concluída, não só build/lint. Resultado final: **Accessibility 100, Best Practices 100, SEO 100, Agentic Browsing 100** — 0 audits falhando.
+
+### Publicado
+Commits sequenciais `staging` → `main` (fast-forward) a cada etapa: `7ddb2f2`, `b044c3d`, `15b9c84`, `fc56c24`, `e9df9cc`, `a23fe70`, `445498f`, `e9ffb0d`.
