@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite --port 3000",
-    "build": "node tools/generate-llms.js || true && node tools/generate-sitemap.js || true && vite build",
+    "build": "node tools/generate-llms.js || true && node tools/generate-sitemap.js || true && vite build && node tools/prerender-product-meta.js || true",
     "preview": "vite preview --host :: --port 3000",
     "lint": "eslint . --quiet"
   },
