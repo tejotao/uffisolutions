@@ -21,11 +21,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { buildProductSchema, buildFaqSchema, buildBreadcrumbSchema, getOgLocale } from '../src/lib/productSchema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const BASE_HTML_PATH = path.join(DIST_DIR, 'index.html');
-const SITE_URL = 'https://uffisolutions.com';
+const SITE_URL = 'https://www.uffisolutions.com';
 
 function loadLocalEnv() {
   const envPath = path.join(__dirname, '..', '.env.local');
@@ -60,11 +61,26 @@ function replaceTag(html, regex, replacement) {
   return html.replace(regex, replacement);
 }
 
-function buildProductHtml(baseHtml, product) {
+// Same Supabase Storage image-transform rewrite as src/lib/imageUrl.js, but
+// reimplemented locally rather than importing that module: it reads
+// `import.meta.env.VITE_SUPABASE_URL`, a Vite-only feature that doesn't
+// exist under plain `node` (this script's runtime) and would throw on
+// import. 1200px matches Google's structured-data image-size guidance for
+// Product rich results.
+function schemaImageUrl(rawUrl) {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+  const rawPrefix = `${supabaseUrl}/storage/v1/object/public/`;
+  if (!rawUrl || !supabaseUrl || !rawUrl.startsWith(rawPrefix)) return rawUrl;
+  const renderPrefix = `${supabaseUrl}/storage/v1/render/image/public/`;
+  return `${rawUrl.replace(rawPrefix, renderPrefix)}?width=1200&quality=80`;
+}
+
+function buildProductHtml(baseHtml, product, category) {
   const title = `${escapeHtml(product.title || product.name)} — UffiSolutions`;
   const description = escapeHtml((product.hero_description || product.description || '').slice(0, 160));
   const url = `${SITE_URL}/products/${product.slug}`;
   const image = product.image_url || null;
+  const ogLocale = getOgLocale(product.language);
 
   let html = baseHtml;
   html = replaceTag(html, /<title>.*?<\/title>/s, `<title>${title}</title>`);
@@ -79,23 +95,37 @@ function buildProductHtml(baseHtml, product) {
     html = replaceTag(html, /<meta property="og:image" content="[^"]*"\s*\/>/, `<meta property="og:image" content="${escapeHtml(image)}" />`);
     html = replaceTag(html, /<meta name="twitter:image" content="[^"]*"\s*\/>/, `<meta name="twitter:image" content="${escapeHtml(image)}" />`);
   }
-  // Add a canonical link (index.html doesn't ship one) right before </head>.
-  html = html.replace('</head>', `\t\t<link rel="canonical" href="${url}" />\n\t</head>`);
+
+  const jsonLdBlocks = [
+    buildProductSchema({ product, categoryName: category?.name, siteUrl: SITE_URL, imageUrl: schemaImageUrl(image) }),
+    buildFaqSchema(product.faq),
+    buildBreadcrumbSchema({ product, categoryName: category?.name, categorySlug: category?.slug, siteUrl: SITE_URL }),
+  ].filter(Boolean);
+
+  const jsonLdScripts = jsonLdBlocks
+    .map((schema) => `\t\t<script type="application/ld+json">${JSON.stringify(schema)}</script>`)
+    .join('\n');
+
+  // canonical + og:locale + JSON-LD, all injected right before </head>.
+  html = html.replace(
+    '</head>',
+    `\t\t<link rel="canonical" href="${url}" />\n\t\t<meta property="og:locale" content="${ogLocale}" />\n${jsonLdScripts}\n\t</head>`
+  );
 
   return html;
 }
 
-async function fetchActiveProducts() {
+function getSupabaseClient() {
   const url = process.env.VITE_SUPABASE_URL;
   const key = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    console.warn('[prerender-product-meta] Missing Supabase credentials — skipping.');
-    return [];
-  }
-  const supabase = createClient(url, key);
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+async function fetchActiveProducts(supabase) {
   const { data, error } = await supabase
     .from('products')
-    .select('slug, title, name, hero_description, description, image_url')
+    .select('slug, title, name, hero_description, description, image_url, price, guarantee_days, faq, language, category_id')
     .eq('active', true)
     .not('slug', 'is', null);
   if (error) {
@@ -103,6 +133,20 @@ async function fetchActiveProducts() {
     return [];
   }
   return data || [];
+}
+
+// English category name — used for the JSON-LD `category` field and the
+// breadcrumb, independent of the `category_translations` table (empty at
+// the time this was written) or the buggy `categoryName` derived by
+// normalizeProduct() in catalogQueries.js (always just the capitalized
+// slug). `categories.name`/`.slug` are the real, populated columns.
+async function fetchCategoriesById(supabase) {
+  const { data, error } = await supabase.from('categories').select('id, name, slug');
+  if (error) {
+    console.warn('[prerender-product-meta] Failed to fetch categories:', error.message);
+    return new Map();
+  }
+  return new Map((data || []).map((c) => [c.id, c]));
 }
 
 async function main() {
@@ -114,13 +158,24 @@ async function main() {
   }
   const baseHtml = fs.readFileSync(BASE_HTML_PATH, 'utf8');
 
-  const products = await fetchActiveProducts();
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    console.warn('[prerender-product-meta] Missing Supabase credentials — skipping.');
+    return;
+  }
+
+  const [products, categoriesById] = await Promise.all([
+    fetchActiveProducts(supabase),
+    fetchCategoriesById(supabase),
+  ]);
+
   let written = 0;
   for (const product of products) {
     if (!product.slug) continue;
+    const category = categoriesById.get(product.category_id);
     const outDir = path.join(DIST_DIR, 'products', product.slug);
     fs.mkdirSync(outDir, { recursive: true });
-    fs.writeFileSync(path.join(outDir, 'index.html'), buildProductHtml(baseHtml, product));
+    fs.writeFileSync(path.join(outDir, 'index.html'), buildProductHtml(baseHtml, product, category));
     written++;
   }
   console.log(`[prerender-product-meta] Wrote ${written} static product pages with real meta tags.`);

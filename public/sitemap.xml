@@ -1,105 +1,125 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://uffisolutions.com/</loc>
+    <loc>https://www.uffisolutions.com/</loc>
     <lastmod>2026-07-12</lastmod>
-    <changefreq>daily</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://uffisolutions.com/login</loc>
+    <loc>https://www.uffisolutions.com/login</loc>
     <lastmod>2026-07-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://uffisolutions.com/register</loc>
+    <loc>https://www.uffisolutions.com/register</loc>
     <lastmod>2026-07-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://uffisolutions.com/products</loc>
+    <loc>https://www.uffisolutions.com/products</loc>
     <lastmod>2026-07-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/armonizza-la-tua-casa-armonizzando-la-tua-vita-d36rjz</loc>
+    <loc>https://www.uffisolutions.com/products/armonizza-la-tua-casa-armonizzando-la-tua-vita-d36rjz</loc>
     <lastmod>2026-07-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="it-IT" href="https://www.uffisolutions.com/products/armonizza-la-tua-casa-armonizzando-la-tua-vita-d36rjz" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/comprare-nel-regno-unito-0zz28e</loc>
+    <loc>https://www.uffisolutions.com/products/comprare-nel-regno-unito-0zz28e</loc>
     <lastmod>2026-07-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="it-IT" href="https://www.uffisolutions.com/products/comprare-nel-regno-unito-0zz28e" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/corso-personal-shopper-internazionale-8spsjk</loc>
+    <loc>https://www.uffisolutions.com/products/corso-personal-shopper-internazionale-8spsjk</loc>
     <lastmod>2026-07-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="it-IT" href="https://www.uffisolutions.com/products/corso-personal-shopper-internazionale-8spsjk" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/harmonize-your-home-harmonizing-your-life-pspi2l</loc>
+    <loc>https://www.uffisolutions.com/products/harmonize-your-home-harmonizing-your-life-pspi2l</loc>
     <lastmod>2026-07-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en-GB" href="https://www.uffisolutions.com/products/harmonize-your-home-harmonizing-your-life-pspi2l" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/viaggiatore-autonomo-b70pdg</loc>
+    <loc>https://www.uffisolutions.com/products/viaggiatore-autonomo-b70pdg</loc>
     <lastmod>2026-07-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="it-IT" href="https://www.uffisolutions.com/products/viaggiatore-autonomo-b70pdg" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/autonomous-traveller-learn-to-use-the-ai-you-already-have-kpo8h1</loc>
+    <loc>https://www.uffisolutions.com/products/autonomous-traveller-learn-to-use-the-ai-you-already-have-kpo8h1</loc>
     <lastmod>2026-07-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en-GB" href="https://www.uffisolutions.com/products/autonomous-traveller-learn-to-use-the-ai-you-already-have-kpo8h1" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/personal-shopper-internacional-krvpu7</loc>
+    <loc>https://www.uffisolutions.com/products/personal-shopper-internacional-krvpu7</loc>
     <lastmod>2026-07-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="es-ES" href="https://www.uffisolutions.com/products/personal-shopper-internacional-krvpu7" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/viajero-autnomo-aprende-a-usar-la-ia-z507jj</loc>
+    <loc>https://www.uffisolutions.com/products/viajero-autnomo-aprende-a-usar-la-ia-z507jj</loc>
     <lastmod>2026-07-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="es-ES" href="https://www.uffisolutions.com/products/viajero-autnomo-aprende-a-usar-la-ia-z507jj" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/guia-viajante-autnomo-wjols6</loc>
+    <loc>https://www.uffisolutions.com/products/guia-viajante-autnomo-wjols6</loc>
     <lastmod>2026-07-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.uffisolutions.com/products/guia-viajante-autnomo-wjols6" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/armoniza-tu-hogar-armonizando-tu-vida-mrfoiu</loc>
+    <loc>https://www.uffisolutions.com/products/armoniza-tu-hogar-armonizando-tu-vida-mrfoiu</loc>
     <lastmod>2026-07-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="es-ES" href="https://www.uffisolutions.com/products/armoniza-tu-hogar-armonizando-tu-vida-mrfoiu" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/personal-shopper-internacional</loc>
+    <loc>https://www.uffisolutions.com/products/personal-shopper-internacional</loc>
     <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.uffisolutions.com/products/personal-shopper-internacional" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/guia-de-compras-uk-kbmgdr</loc>
+    <loc>https://www.uffisolutions.com/products/guia-de-compras-uk-kbmgdr</loc>
     <lastmod>2026-07-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.uffisolutions.com/products/guia-de-compras-uk-kbmgdr" />
   </url>
   <url>
-    <loc>https://uffisolutions.com/products/harmonize-sua-casa-harmonizando-sua-vida-hk1ssi</loc>
+    <loc>https://www.uffisolutions.com/products/harmonize-sua-casa-harmonizando-sua-vida-hk1ssi</loc>
     <lastmod>2026-07-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.uffisolutions.com/products/harmonize-sua-casa-harmonizando-sua-vida-hk1ssi" />
+  </url>
+  <url>
+    <loc>https://www.uffisolutions.com/products/pesquisa-de-fornecedores-e-fbricas-na-china-para-importadores-kvfobv</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.uffisolutions.com/products/pesquisa-de-fornecedores-e-fbricas-na-china-para-importadores-kvfobv" />
   </url>
 </urlset>

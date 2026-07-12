@@ -14,6 +14,10 @@ import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { optimizedImageUrl } from '@/lib/imageUrl';
+import { supabase } from '@/lib/supabaseClient';
+import { buildProductSchema, buildFaqSchema, buildBreadcrumbSchema, getOgLocale } from '@/lib/productSchema';
+
+const SITE_URL = 'https://www.uffisolutions.com';
 
 export default function ProductDetail({ user }) {
   const { id } = useParams();
@@ -29,6 +33,7 @@ export default function ProductDetail({ user }) {
   const [hasAccess, setHasAccess]       = useState(false);
   const [isGranting, setIsGranting]     = useState(false);
   const [openFaqIdx, setOpenFaqIdx]     = useState(null);
+  const [categoryName, setCategoryName] = useState(null);
 
   // Translation strings that carry a "{days}" placeholder (guarantee copy) —
   // getTranslation only does flat key lookup, so the interpolation happens here.
@@ -83,6 +88,20 @@ export default function ProductDetail({ user }) {
 
     if (id) loadProduct();
   }, [id, language, user]);
+
+  // English category name for JSON-LD/breadcrumb — normalizeProduct()'s own
+  // `categoryName` (catalogQueries.js) is just the capitalized slug, not a
+  // real translation, and category_translations is empty at the time this
+  // was written, so neither is usable here. `categories.name` is the real,
+  // populated column — queried directly rather than touching the shared
+  // fetchAllProducts() select (used by every other page).
+  useEffect(() => {
+    if (!product?.category_id) { setCategoryName(null); return; }
+    let cancelled = false;
+    supabase.from('categories').select('name').eq('id', product.category_id).single()
+      .then(({ data }) => { if (!cancelled) setCategoryName(data?.name || null); });
+    return () => { cancelled = true; };
+  }, [product?.category_id]);
 
   const getLanguageFlag = (lang) => {
     if (!lang) return '🌐';
@@ -253,6 +272,16 @@ export default function ProductDetail({ user }) {
 
   const pageTitle = `${product.title || product.name} — UffiSolutions`;
   const pageDescription = (product.hero_description || product.description || '').slice(0, 160);
+  const canonicalUrl = `${SITE_URL}/products/${product.slug || product.id}`;
+  const ogLocale = getOgLocale(product.language);
+
+  const productSchema = buildProductSchema({
+    product, categoryName, siteUrl: SITE_URL, imageUrl: optimizedImageUrl(product.image_url, { width: 1200, quality: 80 }),
+  });
+  const faqSchema = buildFaqSchema(product.faq);
+  const breadcrumbSchema = buildBreadcrumbSchema({
+    product, categoryName, categorySlug: product.categorySlug, siteUrl: SITE_URL,
+  });
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans selection:bg-[#f59e0b]/30">
@@ -262,8 +291,12 @@ export default function ProductDetail({ user }) {
         <meta property="og:title" content={pageTitle} />
         {pageDescription && <meta property="og:description" content={pageDescription} />}
         <meta property="og:type" content="product" />
+        <meta property="og:locale" content={ogLocale} />
         {product.image_url && <meta property="og:image" content={product.image_url} />}
-        <link rel="canonical" href={`https://uffisolutions.com/products/${product.slug || product.id}`} />
+        <link rel="canonical" href={canonicalUrl} />
+        <script type="application/ld+json">{JSON.stringify(productSchema)}</script>
+        {faqSchema && <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>}
+        <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
       </Helmet>
       <Header user={user} isAdminPage={false} />
       

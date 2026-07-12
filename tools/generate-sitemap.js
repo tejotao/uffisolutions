@@ -10,9 +10,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { getHreflang } from '../src/lib/productSchema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SITE_URL = 'https://uffisolutions.com';
+const SITE_URL = 'https://www.uffisolutions.com';
 const OUTPUT_PATH = path.join(__dirname, '..', 'public', 'sitemap.xml');
 
 // Vite only injects VITE_-prefixed vars into import.meta.env for client code —
@@ -34,7 +35,7 @@ function loadLocalEnv() {
 }
 
 const STATIC_ROUTES = [
-  { loc: '/', priority: '1.0', changefreq: 'daily' },
+  { loc: '/', priority: '1.0', changefreq: 'weekly' },
   { loc: '/login', priority: '0.5', changefreq: 'monthly' },
   { loc: '/register', priority: '0.5', changefreq: 'monthly' },
   { loc: '/products', priority: '0.9', changefreq: 'daily' },
@@ -42,16 +43,26 @@ const STATIC_ROUTES = [
 
 function toXml(urls) {
   const body = urls
-    .map(
-      (u) => `  <url>
+    .map((u) => {
+      // hreflang is self-referencing here: each product is its own
+      // language-specific row in the DB (not one product with sibling
+      // translations at other URLs), so there's no reliable "same content,
+      // other language" URL to cross-link to without inventing a matching
+      // heuristic nobody asked for. A self-hreflang is valid and harmless,
+      // it just doesn't get the full cross-referencing benefit a true
+      // alternate-language cluster would.
+      const hreflangLine = u.hreflang
+        ? `\n    <xhtml:link rel="alternate" hreflang="${u.hreflang}" href="${SITE_URL}${u.loc}" />`
+        : '';
+      return `  <url>
     <loc>${SITE_URL}${u.loc}</loc>
     <lastmod>${u.lastmod}</lastmod>
     <changefreq>${u.changefreq}</changefreq>
-    <priority>${u.priority}</priority>
-  </url>`
-    )
+    <priority>${u.priority}</priority>${hreflangLine}
+  </url>`;
+    })
     .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${body}\n</urlset>\n`;
 }
 
 async function fetchActiveProductSlugs() {
@@ -64,7 +75,7 @@ async function fetchActiveProductSlugs() {
   const supabase = createClient(url, key);
   const { data, error } = await supabase
     .from('products')
-    .select('slug, updated_at, created_at')
+    .select('slug, language, updated_at, created_at')
     .eq('active', true)
     .not('slug', 'is', null);
   if (error) {
@@ -84,7 +95,13 @@ async function main() {
   for (const p of products) {
     if (!p.slug) continue;
     const lastmod = (p.updated_at || p.created_at || today).toString().split('T')[0];
-    urls.push({ loc: `/products/${p.slug}`, lastmod, changefreq: 'weekly', priority: '0.8' });
+    urls.push({
+      loc: `/products/${p.slug}`,
+      lastmod,
+      changefreq: 'monthly',
+      priority: '0.9',
+      hreflang: getHreflang(p.language),
+    });
   }
 
   fs.writeFileSync(OUTPUT_PATH, toXml(urls));
