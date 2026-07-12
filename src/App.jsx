@@ -99,8 +99,8 @@ function App() {
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Helmet>
-        <title>UffiSolutions | Portal de Conhecimento</title>
-        <meta name="description" content="Plataforma de treinamentos digitais e soluções." />
+        <title>UffiSolutions | Knowledge Portal</title>
+        <meta name="description" content="Digital knowledge products and solutions for global entrepreneurs." />
       </Helmet>
       <Router>
         <Suspense fallback={<RouteFallback />}>
