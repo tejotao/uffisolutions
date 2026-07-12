@@ -4,7 +4,11 @@ import fs from 'fs';
 import path from 'path';
 
 const CLEAN_CONTENT_REGEX = {
-  comments: /\/\*[\s\S]*?\*\/|\/\/.*$/gm,
+  // Negative lookbehind on "//" avoids treating the "//" in a URL literal
+  // (e.g. `href={`https://...`}`) as a line-comment start — that mismatch
+  // used to eat everything up to the next unrelated "//"/EOL, corrupting
+  // the rest of the file for the regex-based extraction below.
+  comments: /\/\*[\s\S]*?\*\/|(?<!:)\/\/.*$/gm,
   templateLiterals: /`[\s\S]*?`/g,
   strings: /'[^']*'|"[^"]*"/g,
   jsxExpressions: /\{.*?\}/g,
@@ -116,7 +120,7 @@ function extractHelmetData(content, filePath, routes) {
   const description = cleanText(descMatch?.[1]);
   
   const fileName = path.basename(filePath, path.extname(filePath));
-  const url = routes.length && routes.has(fileName) 
+  const url = routes.size && routes.has(fileName)
     ? routes.get(fileName) 
     : generateFallbackUrl(fileName);
   
