@@ -206,6 +206,7 @@ export default function HomePage({ user }) {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
+              aria-label="Filter products by category"
               className="bg-[#141414] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] transition-colors appearance-none sm:w-56"
             >
               <option value="all">{t('home.all_categories')}</option>

@@ -33,7 +33,7 @@ const Footer = () => {
             >
               us@uffisolutions.com
             </a>
-            <div className="text-xs text-gray-500 space-y-1">
+            <div className="text-xs text-gray-400 space-y-1">
               <p>Company Number: 16827147</p>
               <p>Registered in England and Wales</p>
             </div>
@@ -82,7 +82,7 @@ const Footer = () => {
 
         {/* Divider & Copyright */}
         <div className="border-t border-gray-800/50 pt-8 flex items-center justify-center text-center">
-          <p className="text-gray-500 text-sm font-medium">
+          <p className="text-gray-400 text-sm font-medium">
             &copy; {currentYear} UffiSolutions. {t('messages.copyright')}
           </p>
         </div>

@@ -355,8 +355,9 @@ export default function ProductDetail({ user }) {
                         <Play size={64} className="opacity-20" />
                       </div>
                     )}
-                    <button 
+                    <button
                       onClick={toggleFavorite}
+                      aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       className={`absolute top-4 right-4 p-3 rounded-full backdrop-blur-md border border-white/10 transition-all z-10 ${isFavorite ? 'bg-red-500/20 text-red-500' : 'bg-black/40 text-white hover:bg-black/60 hover:text-red-500'}`}
                     >
                       <Heart size={20} className={isFavorite ? "fill-red-500" : ""} />
@@ -370,7 +371,7 @@ export default function ProductDetail({ user }) {
                       ) : (
                         <>
                           <span className="text-4xl font-black text-white">£{Number(product.price).toFixed(2)}</span>
-                          <span className="text-gray-500 text-lg line-through mb-1">£{(Number(product.price) * 1.5).toFixed(2)}</span>
+                          <span className="text-gray-400 text-lg line-through mb-1">£{(Number(product.price) * 1.5).toFixed(2)}</span>
                         </>
                       )}
                     </div>
