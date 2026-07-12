@@ -1,2 +1,2 @@
 ## Pages
-- [Untitled Page](/productdetail): No description available
+- [Untitled Page](/products/:id): No description available
