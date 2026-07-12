@@ -22,6 +22,7 @@ import { getMyActiveAccesses, isAccessValid, daysUntilExpiry } from '@/lib/acces
 import { getDeliverablesForProducts } from '@/lib/deliverableQueries';
 import { supabase } from '@/lib/supabaseClient';
 import { cn, getInitials } from '@/lib/utils';
+import { optimizedImageUrl } from '@/lib/imageUrl';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ const ProductCard = ({ product, onFallback, index = 0 }) => {
       <div className="aspect-video relative overflow-hidden flex items-center justify-center bg-zinc-950">
         {product.image_url || product.imageUrl ? (
           <img
-            src={product.image_url || product.imageUrl}
+            src={optimizedImageUrl(product.image_url || product.imageUrl, { width: 560 })}
             alt={product.title || product.name}
             className="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-700"
           />

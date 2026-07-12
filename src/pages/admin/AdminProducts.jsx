@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { canAccess } from '@/lib/rolePermissions';
 import { cn } from '@/lib/utils';
+import { optimizedImageUrl } from '@/lib/imageUrl';
 
 // ─── Deliverable type config ──────────────────────────────────────────────────
 
@@ -873,7 +874,7 @@ export default function AdminProducts({ user }) {
                             placeholder="https://..."
                             className="flex-grow bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500 transition-colors placeholder-zinc-700" />
                           {formData.image_url && (
-                            <img src={formData.image_url} alt="preview"
+                            <img src={optimizedImageUrl(formData.image_url, { width: 100 })} alt="preview"
                               className="w-12 h-12 rounded-xl object-cover border border-zinc-700 shrink-0"
                               onError={(e) => { e.target.style.display = 'none'; }} />
                           )}

@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { optimizedImageUrl } from '@/lib/imageUrl';
 
 export default function ProductDetail({ user }) {
   const { id } = useParams();
@@ -349,7 +350,7 @@ export default function ProductDetail({ user }) {
                       </div>
                     )}
                     {product.image_url ? (
-                      <img src={product.image_url} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <img src={optimizedImageUrl(product.image_url, { width: 900 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[#2a2a2a] group-hover:scale-105 transition-transform duration-700">
                         <Play size={64} className="opacity-20" />
@@ -557,7 +558,7 @@ export default function ProductDetail({ user }) {
                         </div>
                       )}
                       {rp.image_url ? (
-                        <img src={rp.image_url} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={optimizedImageUrl(rp.image_url, { width: 560 })} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
                           <Play size={32} className="text-[#2a2a2a]" />

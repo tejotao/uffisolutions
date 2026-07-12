@@ -7,6 +7,7 @@ import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import Logo from '@/components/uffi/Logo';
 import { fetchAllProducts, fetchAllCategories, getCategoryIdsForProducts, logSearch } from '@/lib/catalogQueries';
+import { optimizedImageUrl } from '@/lib/imageUrl';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function HomePage({ user }) {
@@ -170,7 +171,7 @@ export default function HomePage({ user }) {
                 >
                   <div className="w-9 h-9 rounded-lg overflow-hidden bg-[#1a1a1a] shrink-0">
                     {product.image_url ? (
-                      <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                      <img src={optimizedImageUrl(product.image_url, { width: 80 })} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Play size={14} className="text-[#2a2a2a]" />
@@ -251,7 +252,7 @@ export default function HomePage({ user }) {
                             </div>
                           )}
                           {product.image_url ? (
-                            <img src={product.image_url} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={optimizedImageUrl(product.image_url, { width: 560 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
                               <Play size={32} className="text-[#2a2a2a]" />

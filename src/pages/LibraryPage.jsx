@@ -12,6 +12,7 @@ import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, isAccessValid } from '@/lib/accessQueries';
 import { getDeliverablesForProduct, getViewedDeliverableIds, markDeliverableViewed } from '@/lib/deliverableQueries';
+import { optimizedImageUrl } from '@/lib/imageUrl';
 
 const getLanguageFlag = (lang) => {
   if (!lang) return '🌐';
@@ -158,7 +159,7 @@ export default function LibraryPage({ user }) {
                 style={{ borderColor: `rgba(${catRgb},0.3)` }}
               >
                 {product.image_url ? (
-                  <img src={product.image_url} alt={product.title || product.name} className="w-full h-full object-cover" />
+                  <img src={optimizedImageUrl(product.image_url, { width: 180 })} alt={product.title || product.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-2xl" style={{ background: `rgba(${catRgb},0.12)` }}>
                     {catIcon}
