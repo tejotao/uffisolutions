@@ -68,6 +68,7 @@
     "react-to-print": "^3.0.4",
     "react-use": "^17.4.0",
     "recharts": "^3.8.1",
+    "resend": "^6.17.2",
     "sonner": "^2.0.7",
     "stripe": "^22.3.0",
     "tailwind-merge": "^1.14.0",
