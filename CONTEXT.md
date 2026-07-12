@@ -1631,3 +1631,34 @@ Cada prioridade testada com Lighthouse real (Chrome DevTools MCP) contra produç
 
 ### Publicado
 Commits sequenciais `staging` → `main` (fast-forward) a cada etapa: `7ddb2f2`, `b044c3d`, `15b9c84`, `fc56c24`, `e9df9cc`, `a23fe70`, `445498f`, `e9ffb0d`.
+
+---
+
+## Sessão 12/07/2026 (cont.) — Bug de imagem distorcida + Schema JSON-LD + fechamento
+
+### Fix crítico — imagens dos cards distorcidas/cortadas
+Usuário reportou imagens "cortadas/pequenas" nos cards da Home após a sessão de otimização de imagens. **Causa raiz não era CSS** (diff confirmado: nenhuma classe de container mudou) — era `optimizedImageUrl()` (`src/lib/imageUrl.js`): o endpoint de transformação do Supabase **não escala a altura proporcionalmente** quando só `width` é passado (confirmado comparando dimensões reais: um arquivo 2752×1536 virava 560×1536 com `width=560` sozinho — só a largura mudava). O `object-cover` (nunca alterado) cortava agressivamente essa imagem já distorcida.
+
+**Corrigido**: `optimizedImageUrl()` ganhou `height`/`resize` opcionais (retrocompatível). Aplicado primeiro nos cards da Home, depois — a pedido do usuário — em todos os outros lugares que tinham o mesmo bug: `ProductDetail.jsx` (hero 900×506, relacionados 560×315), `ProductsPage.jsx` (560×315), `LibraryPage.jsx` (180×180 — container é quadrado, não 16:9), `UserDashboard.jsx` (560×315), `AdminProducts.jsx` (100×100 — também quadrado), e a imagem do Schema JSON-LD em `ProductDetail.jsx`/`tools/prerender-product-meta.js` (1200×675). Duas das proporções sugeridas pelo usuário (LibraryPage e AdminProducts em 16:9) foram corrigidas pra quadrado depois de confirmar o CSS real dos containers — aplicar 16:9 ali teria recriado o mesmo bug em formato diferente.
+
+### Schema Markup JSON-LD (Product + FAQPage + BreadcrumbList)
+Implementado em `src/lib/productSchema.js` (novo, builders puros reusados pelo Node script e pelo React) — injetado estaticamente no HTML pré-renderizado (`tools/prerender-product-meta.js`) e dinamicamente via `react-helmet` (`ProductDetail.jsx`), pra cobrir tanto crawlers sem JS quanto os que executam JS. `Offer.hasMerchantReturnPolicy`/`warranty` usam `product.guarantee_days` real (não hardcoded). `category` vem de `categories.name` (coluna real), não do `categoryName` de `normalizeProduct()` (que é só o slug capitalizado — bug antigo, não corrigido, fora de escopo). URLs trocadas pra `www.uffisolutions.com` em todo lugar (`generate-sitemap.js`, `prerender-product-meta.js`, `robots.txt`, `ProductDetail.jsx`). `og:locale` adicionado por idioma. Sitemap ganhou `hreflang` auto-referenciado por produto (cada produto é uma linha de idioma própria no banco, sem "versão irmã" confiável pra cross-linkar) e `priority`/`changefreq` ajustados.
+
+### category_translations populada
+Tabela estava com 0 linhas (site mostrava "Ebooks-guides" em vez de "E-Books & Guides"). SQL gerado (`sql/2026-07-12_populate_category_translations.sql`, unpivot direto de `categories.name/name_pt/name_it/name_es` — sem hardcode) executado pelo usuário. Confirmado: 24 linhas (6 categorias × 4 idiomas), refletindo corretamente no dropdown de categorias em produção.
+
+### Google Search Console
+Tag `<meta name="google-site-verification">` adicionada em `index.html` — propaga automaticamente pra todas as páginas de produto pré-renderizadas (o script de prerender usa o `index.html` buildado como base). Usuário confirmou verificação da propriedade e submissão do sitemap concluídas no painel do Search Console.
+
+### Verificação final completa (checklist do usuário, tudo conferido de novo — não assumido)
+- **Produção**: site 200 OK, Lighthouse 100/100/100/100 (fresco, não reaproveitado), 14 imagens de card no grid sem distorção (`naturalWidth`/`naturalHeight` conferidos via DOM, batendo exatamente com os parâmetros pedidos), categorias com nomes reais no dropdown.
+- **SEO**: `sitemap.xml` (18 URLs, todas com www) e `robots.txt` acessíveis; JSON-LD completo (`Product`, `FAQPage`, `BreadcrumbList`) confirmado via `curl` em 2 produtos diferentes; zero URLs sem www em todo o sitemap.
+- **Banco**: 14 produtos ativos, `category_translations` com 24 linhas, todos os campos de landing page preenchidos em 14/14 produtos — **exceto `testimonials`, vazio em todos os 14** (nunca foi cadastrado nenhum depoimento; não é bug, é conteúdo pendente).
+- **Git/Deploy**: `git status` limpo (só `EMAIL_TEMPLATES.html`, arquivo solto sem relação, presente desde antes desta sessão), `staging` = `main` = `origin`, último commit com deploy Vercel `success` confirmado via API do GitHub.
+- **Stripe Live**: não re-testado nesta sessão — já validado com compra real em sessão anterior (04-05/07/2026, ver acima).
+
+### ⏳ Única pendência real encontrada
+Nenhum produto tem `testimonials` cadastrado. Não bloqueia nada (a seção só aparece na landing page quando preenchida), mas é a única lacuna de conteúdo restante nos 14 produtos ativos.
+
+### Publicado
+Commits: `85b3adb` (fix imagem Home), `0d94323` (fix imagem — demais telas), `eb85635` (tag Google Search Console).
