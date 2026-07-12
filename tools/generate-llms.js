@@ -201,13 +201,17 @@ function generateFallbackUrl(fileName) {
   return cleanName === 'app' ? '/' : `/${cleanName}`;
 }
 
+// llmstxt.org requires at minimum an H1 + a short summary before any
+// section — Lighthouse's Agentic Browsing category checks for exactly
+// this. Reuses the same description already approved for index.html /
+// App.jsx's <Helmet>, rather than writing new copy here.
 function generateLlmsTxt(pages) {
   const sortedPages = pages.sort((a, b) => a.title.localeCompare(b.title));
-  const pageEntries = sortedPages.map(page => 
+  const pageEntries = sortedPages.map(page =>
     `- [${page.title}](${page.url}): ${page.description}`
   ).join('\n');
-  
-  return `## Pages\n${pageEntries}`;
+
+  return `# UffiSolutions\n\n> Step-by-step guides for building an international life — shopping, importing, travel and AI tools. Available in 4 languages.\n\n## Pages\n${pageEntries}`;
 }
 
 function ensureDirectoryExists(dirPath) {
