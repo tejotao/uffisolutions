@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Play, ShoppingCart, Star, Clock, Users, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle,
+  Play, ShoppingCart, Star, Clock, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle,
   ShieldCheck, ChevronDown, Quote,
 } from 'lucide-react';
 import { fetchAllProducts } from '@/lib/catalogQueries';
@@ -320,11 +320,6 @@ export default function ProductDetail({ user }) {
 
                 <div className="flex flex-wrap items-center gap-6 mt-auto mb-6">
                   <div className="flex items-center gap-2 text-gray-300">
-                    <Star className="text-[#f59e0b] fill-[#f59e0b]" size={20} />
-                    <span className="font-bold text-white">{product.rating || '5.0'}</span>
-                    <span className="text-sm text-gray-500">(120+ {t('detail.rating_count')})</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-300">
                     <User className="text-gray-400" size={20} />
                     <span>{product.instructor || 'Expert'}</span>
                   </div>
@@ -383,10 +378,6 @@ export default function ProductDetail({ user }) {
 
                   {/* ── Action button — context-aware ── */}
                   {renderCtaButton()}
-
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">
-                    <Users size={16} /> +1000 {t('detail.students')}
-                  </div>
                 </div>
               </div>
 
