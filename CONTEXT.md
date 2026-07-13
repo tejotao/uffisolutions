@@ -1662,3 +1662,36 @@ Nenhum produto tem `testimonials` cadastrado. Não bloqueia nada (a seção só 
 
 ### Publicado
 Commits: `85b3adb` (fix imagem Home), `0d94323` (fix imagem — demais telas), `eb85635` (tag Google Search Console).
+
+---
+
+## Sessão 13-14/07/2026 — Emails transacionais de venda (Resend) + 3 bugs de produção + PayPal
+
+**Motivação:** disparar dois emails automáticos no webhook do Stripe (`checkout.session.completed`) — notificação de venda pro dono e confirmação de compra pro cliente — reaproveitando o design system dos templates já existentes (`docs/email-templates/*.html`).
+
+### Implementado
+`api/stripe-webhook.js` ganhou dois emails via Resend: Email 1 (dono, `us@uffisolutions.com`) com produto/valor/cliente/data + link direto pro Stripe Dashboard; Email 2 (comprador) com confirmação, instrução de login, garantia e contato. Layout reaproveitado 1:1 do design system dos templates de auth (fundo `#0a0a0a`, card `#141414`, barra de gradiente, ícone circular, CTA âmbar). `resend` adicionado ao `package.json`.
+
+### Bug crítico — `FUNCTION_INVOCATION_FAILED` em todo o webhook
+`new Resend(process.env.RESEND_API_KEY)` no topo do módulo lança **de forma síncrona** se a key estiver ausente/vazia — derrubava a function inteira no cold start, inclusive pra POSTs reais do Stripe sem relação com email. Corrigido: instanciação movida pra dentro de `sendEmail()`, já protegida por try/catch (lazy).
+
+### Bug — upsert de acesso bloqueava os emails
+`user_product_access` upsert usava `if (error) throw`, que propagava pro catch externo do handler e pulava tudo depois — inclusive os dois emails —, contrariando o design pretendido ("emails disparam independente do resultado da concessão de acesso"). Isolado em try/catch próprio, igual ao padrão já usado em `notifications`/`purchases`.
+
+### Investigação — compras de teste no Sandbox não liberavam acesso nem mandavam email
+Testado em 3 URLs (produção, alias de produção, Preview) sem sucesso. Causa raiz achada via prints do Stripe Dashboard: **o modo Test nunca teve nenhum webhook configurado** — zero destinos, o evento não tinha pra onde ir; não era problema de domínio, projeto Vercel ou código. Resolvido criando um endpoint de teste apontando pro Preview (`.../api/stripe-webhook?x-vercel-protection-bypass=...`, necessário pela Vercel Deployment Protection), com o signing secret salvo em `STRIPE_WEBHOOK_SECRET` escopo Preview.
+
+### Bug — `RESEND_API_KEY` nunca existiu na Vercel (nem Preview nem Production)
+Confirmado via log de diagnóstico temporário (removido depois de confirmado) que a variável simplesmente não existia em nenhum ambiente — os emails de venda nunca funcionaram, nem em produção real. Criada key nova no Resend (`uffisolutions-webhook`), adicionada em Production + Preview, redeploy dos dois.
+
+### PayPal habilitado como método de pagamento (config only, sem mudança de código)
+Ativado em Stripe Dashboard → Payment methods, na conta correta (UffiSolutions — cuidado ao trocar, existe uma conta Stripe separada pro hubukbox no mesmo login). Receita configurada pra cair no saldo Stripe (não saldo PayPal separado), preservando a reconciliação Stripe→Xero já existente. Como entra pelo mesmo Payment Link/Checkout Session, dispara o mesmo `checkout.session.completed` — nenhuma mudança de webhook necessária.
+
+### Email do comprador padronizado em inglês
+A pedido do usuário, o Email 2 (comprador, user-facing) passou a ser sempre em inglês, independente do idioma do produto (`product.language` é buscado mas não usado nesse fluxo) — mais simples que i18n completo. `emailShell()` ganhou parâmetro `lang` (default `'pt'`) pra refletir isso no `<html lang="...">`. Email 1 (dono, interno) continua em português.
+
+### Verificação
+Compra de teste completa no Preview, ponta a ponta: assinatura verificada (200 no log da Vercel), acesso liberado (`user_product_access` upsert confirmado), os 2 emails chegaram — dono em português, comprador em inglês.
+
+### Publicado
+`staging` → `main` (fast-forward): `32e55af` (feat emails), `646e623` (hotfix crash Resend), `d1efc7a` (fix upsert isolado), `792ad0a` (email comprador em inglês) — os dois commits de log de diagnóstico temporário (`3468c89`/`e3f4d73`) se cancelam, sem efeito líquido no código.
