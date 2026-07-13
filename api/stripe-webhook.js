@@ -5,7 +5,6 @@ import { Resend } from 'resend';
 export const config = { api: { bodyParser: false } };
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -190,6 +189,14 @@ function buildCustomerConfirmationEmail({ productName, guaranteeDays }) {
 
 async function sendEmail({ to, subject, html }) {
   try {
+    // Constructed lazily, inside the try/catch — unlike the Stripe/Supabase
+    // clients above, `new Resend()` throws synchronously if the API key is
+    // missing/empty. Building it here means a misconfigured key only fails
+    // the email (already the point of wrapping this in try/catch), instead
+    // of crashing the whole function at cold start before any request —
+    // including real Stripe POSTs — could even be handled
+    // (FUNCTION_INVOCATION_FAILED for every invocation, not just email).
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const { error } = await resend.emails.send({
       from: `UffiSolutions <${OWNER_EMAIL}>`,
       to,
