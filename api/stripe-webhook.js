@@ -304,22 +304,33 @@ export default async function handler(req, res) {
 
     const expiryDate = product?.access_duration_days ? addDays(product.access_duration_days) : null;
 
-    const { data: accessRows, error: accessError } = await supabase
-      .from('user_product_access')
-      .upsert(
-        {
-          user_id: userId,
-          product_id: productId,
-          granted_by: null,
-          expiry_date: expiryDate,
-          is_active: true,
-          notes: `Stripe purchase — session ${session.id}`,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,product_id' }
-      )
-      .select();
-    if (accessError) throw accessError;
+    // Own try/catch (not `if (error) throw`) — a real Supabase error here
+    // used to propagate to the outer catch and skip everything below it,
+    // including the sale/confirmation emails further down. Stripe already
+    // charged the customer by this point regardless of whether this upsert
+    // succeeds, so a DB hiccup here must not silently cancel the emails too.
+    let accessRows = null;
+    try {
+      const { data, error: accessError } = await supabase
+        .from('user_product_access')
+        .upsert(
+          {
+            user_id: userId,
+            product_id: productId,
+            granted_by: null,
+            expiry_date: expiryDate,
+            is_active: true,
+            notes: `Stripe purchase — session ${session.id}`,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,product_id' }
+        )
+        .select();
+      if (accessError) throw accessError;
+      accessRows = data;
+    } catch (accessError) {
+      console.error('user_product_access upsert threw (non-blocking — emails still send):', { userId, productId, sessionId: session.id }, accessError);
+    }
 
     if (!accessRows || accessRows.length === 0) {
       // Supabase does not return an error when RLS blocks a write — it just
