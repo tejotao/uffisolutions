@@ -19,9 +19,9 @@ const SITE_URL = 'https://www.uffisolutions.com';
 // kept self-contained here (not a shared import) because Vercel treats every
 // file under /api as its own route unless prefixed with "_", and this file
 // is the only thing that needs these.
-function emailShell({ accentFrom, accentTo, icon, iconBorder, title, bodyHtml, ctaLabel, ctaUrl }) {
+function emailShell({ accentFrom, accentTo, icon, iconBorder, title, bodyHtml, ctaLabel, ctaUrl, lang = 'pt' }) {
   return `<!DOCTYPE html>
-<html lang="pt">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -148,20 +148,24 @@ function buildOwnerSaleEmail({ productName, amountFormatted, customerEmail, date
   };
 }
 
-// Email 2 — purchase confirmation, sent to the buyer.
+// Email 2 — purchase confirmation, sent to the buyer. English is the
+// standard here regardless of the product's own language (user-facing
+// content, kept consistent rather than branching per product.language) —
+// the owner-facing sale notification above stays in Portuguese since it's
+// internal only.
 function buildCustomerConfirmationEmail({ productName, guaranteeDays }) {
   const bodyHtml = `
                 <tr>
                   <td align="center" style="padding-bottom:24px;">
                     <p style="margin:0;font-size:15px;color:#a1a1aa;line-height:1.6;text-align:center;">
-                      Sua compra de <strong style="color:#ffffff;">${productName}</strong> foi confirmada com sucesso! Faça login em <strong style="color:#ffffff;">uffisolutions.com</strong> com o mesmo email usado na compra para acessar o conteúdo.
+                      Your purchase of <strong style="color:#ffffff;">${productName}</strong> has been confirmed! Log in at <strong style="color:#ffffff;">uffisolutions.com</strong> with the same email used at checkout to access your content.
                     </p>
                   </td>
                 </tr>
                 <tr>
                   <td style="background-color:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px 18px;">
                     <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">
-                      🛡️ Garantia de ${guaranteeDays} dias — se não ficar satisfeito, devolvemos 100% do valor pago, sem perguntas.
+                      🛡️ ${guaranteeDays}-day guarantee — not satisfied? We'll refund 100% of your payment, no questions asked.
                     </p>
                   </td>
                 </tr>
@@ -169,20 +173,21 @@ function buildCustomerConfirmationEmail({ productName, guaranteeDays }) {
                 <tr>
                   <td align="center">
                     <p style="margin:0;font-size:12px;color:#52525b;text-align:center;">
-                      Dúvidas? Fale com a gente: <a href="mailto:${OWNER_EMAIL}" style="color:#f59e0b;text-decoration:none;">${OWNER_EMAIL}</a>
+                      Questions? Reach out: <a href="mailto:${OWNER_EMAIL}" style="color:#f59e0b;text-decoration:none;">${OWNER_EMAIL}</a>
                     </p>
                   </td>
                 </tr>`;
 
   return {
-    subject: `✅ Sua compra foi confirmada — ${productName}`,
+    subject: `✅ Your purchase is confirmed — ${productName}`,
     html: emailShell({
       accentFrom: '#f59e0b', accentTo: '#d97706',
       icon: '✅', iconBorder: '#f59e0b33',
-      title: 'Compra confirmada!',
+      title: 'Purchase confirmed!',
       bodyHtml,
-      ctaLabel: 'Acessar Minha Conta',
+      ctaLabel: 'Access My Account',
       ctaUrl: `${SITE_URL}/login`,
+      lang: 'en',
     }),
   };
 }
