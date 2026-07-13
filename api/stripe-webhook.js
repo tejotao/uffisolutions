@@ -268,7 +268,16 @@ export default async function handler(req, res) {
     const rawBody = await readRawBody(req);
     event = stripe.webhooks.constructEvent(rawBody, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    console.error('Stripe signature verification failed:', err.message);
+    // Temporary diagnostic (2026-07-13) — narrows down whether the failure is
+    // a missing/wrong-scoped STRIPE_WEBHOOK_SECRET vs a missing signature
+    // header, without ever logging the secret itself.
+    const secret = process.env.STRIPE_WEBHOOK_SECRET || '';
+    console.error('Stripe signature verification failed:', err.message, {
+      secretPresent: secret.length > 0,
+      secretPrefix: secret.slice(0, 8),
+      secretLength: secret.length,
+      sigHeaderPresent: Boolean(req.headers['stripe-signature']),
+    });
     res.status(400).send(`Webhook Error: ${err.message}`);
     return;
   }
