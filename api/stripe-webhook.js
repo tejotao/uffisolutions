@@ -122,13 +122,14 @@ function saleRow(label, value) {
 }
 
 // Email 1 — sale notification, sent to the shop owner.
-function buildOwnerSaleEmail({ productName, amountFormatted, customerEmail, dateStr, dashboardUrl }) {
+function buildOwnerSaleEmail({ productName, amountFormatted, customerEmail, customerName, dateStr, dashboardUrl }) {
   const bodyHtml = `
                 <tr>
                   <td style="padding-bottom:28px;">
                     <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;padding:4px 18px;">
                       ${saleRow('Produto', productName)}
                       ${saleRow('Valor pago', amountFormatted)}
+                      ${customerName ? saleRow('Nome', customerName) : ''}
                       ${saleRow('Cliente', customerEmail)}
                       ${saleRow('Data e hora', dateStr)}
                     </table>
@@ -153,15 +154,27 @@ function buildOwnerSaleEmail({ productName, amountFormatted, customerEmail, date
 // content, kept consistent rather than branching per product.language) —
 // the owner-facing sale notification above stays in Portuguese since it's
 // internal only.
-function buildCustomerConfirmationEmail({ productName, guaranteeDays }) {
+function buildCustomerConfirmationEmail({ productName, guaranteeDays, buyerName, isNewAccount }) {
+  const intro = buyerName
+    ? `Hi ${buyerName}, your purchase of`
+    : 'Your purchase of';
   const bodyHtml = `
                 <tr>
                   <td align="center" style="padding-bottom:24px;">
                     <p style="margin:0;font-size:15px;color:#a1a1aa;line-height:1.6;text-align:center;">
-                      Your purchase of <strong style="color:#ffffff;">${productName}</strong> has been confirmed! Log in at <strong style="color:#ffffff;">uffisolutions.com</strong> with the same email used at checkout to access your content.
+                      ${intro} <strong style="color:#ffffff;">${productName}</strong> has been confirmed! Log in at <strong style="color:#ffffff;">uffisolutions.com</strong> with the same email used at checkout to access your content.
                     </p>
                   </td>
                 </tr>
+                ${isNewAccount ? `
+                <tr>
+                  <td style="background-color:#f59e0b1a;border:1px solid #f59e0b40;border-radius:10px;padding:14px 18px;">
+                    <p style="margin:0;font-size:12px;color:#f59e0b;text-align:center;">
+                      📩 Look out for a separate email from us — it has the link to set up your password before you log in for the first time.
+                    </p>
+                  </td>
+                </tr>
+                <tr><td style="height:12px;"></td></tr>` : ''}
                 <tr>
                   <td style="background-color:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px 18px;">
                     <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">
@@ -254,14 +267,14 @@ function parseClientReferenceId(clientRef) {
 // purchase-confirmation email sent later) so they land on /reset-password to
 // set a password and access what they just bought.
 async function resolveUserIdForPurchase(buyerEmail) {
-  if (!buyerEmail) return null;
+  if (!buyerEmail) return { userId: null, isNewAccount: false };
 
   const { data: existingProfile } = await supabase
     .from('profiles')
     .select('id')
     .eq('email', buyerEmail)
     .maybeSingle();
-  if (existingProfile) return existingProfile.id;
+  if (existingProfile) return { userId: existingProfile.id, isNewAccount: false };
 
   const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(buyerEmail, {
     redirectTo: `${SITE_URL}/reset-password`,
@@ -273,7 +286,7 @@ async function resolveUserIdForPurchase(buyerEmail) {
     { id: newUserId, email: buyerEmail, updated_at: new Date().toISOString() },
     { onConflict: 'id' }
   );
-  return newUserId;
+  return { userId: newUserId, isNewAccount: true };
 }
 
 // A refund only gives us the Charge/PaymentIntent — client_reference_id lives
@@ -353,7 +366,12 @@ export default async function handler(req, res) {
   const session = event.data.object;
   let { userId, productId, isAnonymous } = parseClientReferenceId(session.client_reference_id);
   const buyerEmail = session.customer_details?.email || session.customer_email;
-  console.log('stripe-webhook: checkout.session.completed', { sessionId: session.id, clientReferenceId: session.client_reference_id, userId, productId, isAnonymous, buyerEmail });
+  // Only populated if "Billing address"/"Name" collection is turned on for
+  // the product's Payment Link in the Stripe Dashboard — null otherwise, in
+  // which case the emails below just fall back to their generic phrasing.
+  const buyerName = session.customer_details?.name || null;
+  let isNewAccount = false;
+  console.log('stripe-webhook: checkout.session.completed', { sessionId: session.id, clientReferenceId: session.client_reference_id, userId, productId, isAnonymous, buyerEmail, buyerName });
 
   if (!productId) {
     console.error('Missing/malformed client_reference_id on session', session.id);
@@ -364,7 +382,9 @@ export default async function handler(req, res) {
   try {
     if (isAnonymous) {
       try {
-        userId = await resolveUserIdForPurchase(buyerEmail);
+        const resolved = await resolveUserIdForPurchase(buyerEmail);
+        userId = resolved.userId;
+        isNewAccount = resolved.isNewAccount;
       } catch (resolveError) {
         console.error('Failed to resolve/create account for anonymous purchase (non-blocking — emails still send):', { productId, buyerEmail, sessionId: session.id }, resolveError);
       }
@@ -468,13 +488,14 @@ export default async function handler(req, res) {
       productName,
       amountFormatted: `£${((session.amount_total ?? 0) / 100).toFixed(2)}`,
       customerEmail: buyerEmail || 'N/A',
+      customerName: buyerName,
       dateStr,
       dashboardUrl,
     });
     await sendEmail({ to: OWNER_EMAIL, subject: ownerEmail.subject, html: ownerEmail.html });
 
     if (buyerEmail) {
-      const customerEmail = buildCustomerConfirmationEmail({ productName, guaranteeDays });
+      const customerEmail = buildCustomerConfirmationEmail({ productName, guaranteeDays, buyerName, isNewAccount });
       await sendEmail({ to: buyerEmail, subject: customerEmail.subject, html: customerEmail.html });
     } else {
       console.error('No buyer email on session — skipping purchase confirmation email', session.id);
