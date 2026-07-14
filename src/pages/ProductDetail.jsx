@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Play, ShoppingCart, Star, Clock, User, ArrowLeft, Heart, AlertCircle, Loader2, CheckCircle,
   ShieldCheck, ChevronDown, Quote,
@@ -23,7 +23,6 @@ const SITE_URL = 'https://www.uffisolutions.com';
 export default function ProductDetail({ user }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { language, t } = useLanguage();
 
@@ -122,32 +121,24 @@ export default function ProductDetail({ user }) {
     });
   };
 
+  // Goes straight to Stripe regardless of login state. Logged-in buyers keep
+  // the existing `${userId}_${productId}` client_reference_id. Anonymous
+  // buyers get `anon_${productId}` instead — the webhook resolves/creates
+  // the account afterwards from the email Stripe Checkout collects itself
+  // (see api/stripe-webhook.js's parseClientReferenceId + account
+  // resolution), so there's no separate email-collection step here.
   const handleBuy = () => {
-    if (!user) {
-      localStorage.setItem('uffi_pending_buy', product.id);
-      const lang = product.language ? `?lang=${product.language}` : '';
-      navigate(`/start${lang}`);
-      return;
-    }
     const link = product.stripe_link || product.stripe_payment_link;
     if (!link) { toast({ title: t('toast.error'), description: 'Payment link not configured yet.', variant: 'destructive' }); return; }
     const url = new URL(link);
-    url.searchParams.set('client_reference_id', `${user.id}_${product.id}`);
-    url.searchParams.set('prefilled_email', user.email);
+    if (user) {
+      url.searchParams.set('client_reference_id', `${user.id}_${product.id}`);
+      url.searchParams.set('prefilled_email', user.email);
+    } else {
+      url.searchParams.set('client_reference_id', `anon_${product.id}`);
+    }
     window.open(url.toString(), '_blank');
   };
-
-  // Resumes a purchase started before login/registration (see handleBuy above
-  // and UserDashboard's pending-buy redirect) once the user and product are
-  // both loaded.
-  useEffect(() => {
-    if (user && product && searchParams.get('autobuy') === '1') {
-      searchParams.delete('autobuy');
-      setSearchParams(searchParams, { replace: true });
-      handleBuy();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, product]);
 
   const handleFreeAccess = async () => {
     if (!user) { navigate('/register'); return; }

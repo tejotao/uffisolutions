@@ -229,6 +229,53 @@ function addDays(days) {
   return date.toISOString().split('T')[0];
 }
 
+// Two client_reference_id shapes reach the webhook: `${userId}_${productId}`
+// for buyers who were already logged in when they hit "Buy" (ProductDetail's
+// handleBuy embeds the real user id), and `anon_${productId}` for anonymous
+// checkouts, which now go straight to Stripe with no login step first. The
+// anon case has no known userId yet — the caller must resolve one from the
+// buyer's email (see resolveUserIdForPurchase below). Shared by both the
+// main checkout.session.completed handler and handleRefund so the two never
+// drift out of sync on how they parse this field.
+function parseClientReferenceId(clientRef) {
+  const ref = clientRef || '';
+  if (ref.startsWith('anon_')) {
+    return { userId: null, productId: ref.slice(5) || null, isAnonymous: true };
+  }
+  const [userId, productId] = ref.split('_');
+  return { userId: userId || null, productId: productId || null, isAnonymous: false };
+}
+
+// Anonymous checkouts have no pre-existing userId — resolve one from the
+// email Stripe Checkout itself collects: reuse the account if that email
+// already has one (profiles.email), otherwise create a brand-new Supabase
+// Auth user and invite them by email (Supabase's own invite email, sent via
+// whatever SMTP the project has configured — separate from the Resend
+// purchase-confirmation email sent later) so they land on /reset-password to
+// set a password and access what they just bought.
+async function resolveUserIdForPurchase(buyerEmail) {
+  if (!buyerEmail) return null;
+
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', buyerEmail)
+    .maybeSingle();
+  if (existingProfile) return existingProfile.id;
+
+  const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(buyerEmail, {
+    redirectTo: `${SITE_URL}/reset-password`,
+  });
+  if (inviteError) throw inviteError;
+
+  const newUserId = invited.user.id;
+  await supabase.from('profiles').upsert(
+    { id: newUserId, email: buyerEmail, updated_at: new Date().toISOString() },
+    { onConflict: 'id' }
+  );
+  return newUserId;
+}
+
 // A refund only gives us the Charge/PaymentIntent — client_reference_id lives
 // on the Checkout Session, so we look the session back up via the Stripe API
 // rather than needing a new column/migration to link purchases back to users.
@@ -241,9 +288,23 @@ async function handleRefund(charge) {
       return;
     }
 
-    const [userId, productId] = (session.client_reference_id || '').split('_');
-    if (!userId || !productId) {
+    let { userId, productId, isAnonymous } = parseClientReferenceId(session.client_reference_id);
+    if (!productId) {
       console.error('charge.refunded: missing/malformed client_reference_id on session', session.id);
+      return;
+    }
+
+    if (isAnonymous) {
+      const buyerEmail = session.customer_details?.email || session.customer_email;
+      // Refund-time lookup only — the account was already created (if
+      // needed) at purchase time, so this never invites a new user.
+      const { data: existingProfile } = await supabase.from('profiles').select('id').eq('email', buyerEmail).maybeSingle();
+      userId = existingProfile?.id || null;
+    }
+
+    if (!userId) {
+      console.error('charge.refunded: could not resolve a user to revoke access from', { productId, sessionId: session.id });
+      await supabase.from('purchases').update({ status: 'refunded' }).eq('stripe_session', session.id);
       return;
     }
 
@@ -290,16 +351,28 @@ export default async function handler(req, res) {
   }
 
   const session = event.data.object;
-  const [userId, productId] = (session.client_reference_id || '').split('_');
-  console.log('stripe-webhook: checkout.session.completed', { sessionId: session.id, clientReferenceId: session.client_reference_id, userId, productId });
+  let { userId, productId, isAnonymous } = parseClientReferenceId(session.client_reference_id);
+  const buyerEmail = session.customer_details?.email || session.customer_email;
+  console.log('stripe-webhook: checkout.session.completed', { sessionId: session.id, clientReferenceId: session.client_reference_id, userId, productId, isAnonymous, buyerEmail });
 
-  if (!userId || !productId) {
+  if (!productId) {
     console.error('Missing/malformed client_reference_id on session', session.id);
     res.status(400).send('Missing client_reference_id');
     return;
   }
 
   try {
+    if (isAnonymous) {
+      try {
+        userId = await resolveUserIdForPurchase(buyerEmail);
+      } catch (resolveError) {
+        console.error('Failed to resolve/create account for anonymous purchase (non-blocking — emails still send):', { productId, buyerEmail, sessionId: session.id }, resolveError);
+      }
+      if (!userId) {
+        console.error('Anonymous checkout with no resolvable account — access not granted, only notification emails will send', { productId, buyerEmail, sessionId: session.id });
+      }
+    }
+
     const { data: product, error: productError } = await supabase
       .from('products')
       .select('access_duration_days, language, name, title, guarantee_days')
@@ -315,34 +388,39 @@ export default async function handler(req, res) {
     // charged the customer by this point regardless of whether this upsert
     // succeeds, so a DB hiccup here must not silently cancel the emails too.
     let accessRows = null;
-    try {
-      const { data, error: accessError } = await supabase
-        .from('user_product_access')
-        .upsert(
-          {
-            user_id: userId,
-            product_id: productId,
-            granted_by: null,
-            expiry_date: expiryDate,
-            is_active: true,
-            notes: `Stripe purchase — session ${session.id}`,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,product_id' }
-        )
-        .select();
-      if (accessError) throw accessError;
-      accessRows = data;
-    } catch (accessError) {
-      console.error('user_product_access upsert threw (non-blocking — emails still send):', { userId, productId, sessionId: session.id }, accessError);
+    if (userId) {
+      try {
+        const { data, error: accessError } = await supabase
+          .from('user_product_access')
+          .upsert(
+            {
+              user_id: userId,
+              product_id: productId,
+              granted_by: null,
+              expiry_date: expiryDate,
+              is_active: true,
+              notes: `Stripe purchase — session ${session.id}`,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,product_id' }
+          )
+          .select();
+        if (accessError) throw accessError;
+        accessRows = data;
+      } catch (accessError) {
+        console.error('user_product_access upsert threw (non-blocking — emails still send):', { userId, productId, sessionId: session.id }, accessError);
+      }
     }
 
     if (!accessRows || accessRows.length === 0) {
-      // Supabase does not return an error when RLS blocks a write — it just
-      // affects 0 rows. Seeing this log with no thrown error almost always
-      // means SUPABASE_SERVICE_ROLE_KEY is missing/wrong in Vercel env vars
-      // (the client fell back to being RLS-restricted instead of bypassing it).
-      console.error('user_product_access upsert affected 0 rows — check SUPABASE_SERVICE_ROLE_KEY in Vercel env vars', { userId, productId, sessionId: session.id });
+      // Two distinct causes land here: userId is null (anonymous checkout
+      // whose account resolution failed above — already logged separately),
+      // or the upsert ran but silently affected 0 rows, which is what
+      // Supabase does when RLS blocks a write instead of returning an error
+      // (almost always SUPABASE_SERVICE_ROLE_KEY missing/wrong in Vercel).
+      if (userId) {
+        console.error('user_product_access upsert affected 0 rows — check SUPABASE_SERVICE_ROLE_KEY in Vercel env vars', { userId, productId, sessionId: session.id });
+      }
     } else {
       console.log('user_product_access upserted successfully', accessRows[0]);
       try {
@@ -360,8 +438,6 @@ export default async function handler(req, res) {
         console.error('notification insert failed (non-blocking):', notifyError);
       }
     }
-
-    const buyerEmail = session.customer_details?.email || session.customer_email;
 
     try {
       await supabase.from('purchases').insert({

@@ -317,17 +317,6 @@ export default function UserDashboard({ user }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Resumes a purchase that was interrupted by the register/login flow
-  // (see ProductDetail.jsx's handleBuy, which stores this before redirecting).
-  useEffect(() => {
-    const pendingBuy = localStorage.getItem('uffi_pending_buy');
-    if (pendingBuy) {
-      localStorage.removeItem('uffi_pending_buy');
-      navigate(`/products/${pendingBuy}?autobuy=1`, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // First-login welcome modal state
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [welcomeLanguage, setWelcomeLanguage] = useState('pt');
