@@ -16,6 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { optimizedImageUrl } from '@/lib/imageUrl';
 import { supabase } from '@/lib/supabaseClient';
 import { buildProductSchema, buildFaqSchema, buildBreadcrumbSchema, getOgLocale } from '@/lib/productSchema';
+import { getCtaVariant, getFreeCta, getFreeSubtext, getAuthorityLine, getObjections, getTagline } from '@/lib/conversionCopy';
 
 const SITE_URL = 'https://www.uffisolutions.com';
 
@@ -231,42 +232,57 @@ export default function ProductDetail({ user }) {
   const isFree = product.is_free || parseFloat(product.price) === 0 || !product.price;
   const guaranteeDays = product.guarantee_days ?? 14;
 
-  // Shared primary CTA — used both in the sidebar action card and the final
-  // CTA section, so the buy/access/free logic only lives in one place.
-  const renderCtaButton = (extraClassName = 'mb-4') => {
-    const base = `w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] ${extraClassName}`;
+  // Shared primary CTA — used at every CTA position on the page (hero,
+  // mid-page, before FAQ, final), so the buy/access/free logic only lives in
+  // one place. `ctaIndex` picks a different purchase phrase per position
+  // (see src/lib/conversionCopy.js) so the same line is never repeated
+  // twice on one page; it only affects the not-yet-purchased paid branch.
+  const renderCtaButton = (wrapperClassName = 'mb-4', ctaIndex = 0) => {
+    const buttonBase = 'w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]';
     if (isFree) {
       if (!user) {
         return (
-          <button onClick={() => navigate('/register')} className={`${base} bg-[#10b981] hover:bg-[#059669] text-black`}>
-            🎁 Get Free Access
-          </button>
+          <div className={wrapperClassName}>
+            <button onClick={() => navigate('/register')} className={`${buttonBase} bg-[#10b981] hover:bg-[#059669] text-black`}>
+              🎁 {getFreeCta(product.language)}
+            </button>
+            <p className="text-xs text-gray-500 text-center mt-2.5">{getFreeSubtext(product.language)}</p>
+          </div>
         );
       }
       if (hasAccess) {
         return (
-          <button onClick={openAccessModal} className={`${base} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
-            <Play size={22} className="fill-black" /> {t('detail.access')}
-          </button>
+          <div className={wrapperClassName}>
+            <button onClick={openAccessModal} className={`${buttonBase} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
+              <Play size={22} className="fill-black" /> {t('detail.access')}
+            </button>
+          </div>
         );
       }
       return (
-        <button onClick={handleFreeAccess} disabled={isGranting} className={`${base} bg-[#10b981] hover:bg-[#059669] text-black disabled:opacity-70`}>
-          {isGranting ? <Loader2 size={22} className="animate-spin" /> : '🎁 Get Free Access'}
-        </button>
+        <div className={wrapperClassName}>
+          <button onClick={handleFreeAccess} disabled={isGranting} className={`${buttonBase} bg-[#10b981] hover:bg-[#059669] text-black disabled:opacity-70`}>
+            {isGranting ? <Loader2 size={22} className="animate-spin" /> : `🎁 ${getFreeCta(product.language)}`}
+          </button>
+          <p className="text-xs text-gray-500 text-center mt-2.5">{getFreeSubtext(product.language)}</p>
+        </div>
       );
     }
     if (user && hasAccess) {
       return (
-        <button onClick={openAccessModal} className={`${base} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
-          <Play size={22} className="fill-black" /> {t('detail.access')}
-        </button>
+        <div className={wrapperClassName}>
+          <button onClick={openAccessModal} className={`${buttonBase} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
+            <Play size={22} className="fill-black" /> {t('detail.access')}
+          </button>
+        </div>
       );
     }
     return (
-      <button onClick={handleBuy} className={`${base} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
-        <ShoppingCart size={24} /> {t('detail.buy_now')} — £{Number(product.price).toFixed(2)}
-      </button>
+      <div className={wrapperClassName}>
+        <button onClick={handleBuy} className={`${buttonBase} bg-[#f59e0b] hover:bg-[#d97706] text-black`}>
+          <ShoppingCart size={24} /> {getCtaVariant(product.language, ctaIndex)}
+        </button>
+      </div>
     );
   };
 
@@ -345,7 +361,13 @@ export default function ProductDetail({ user }) {
                 </h1>
 
                 {product.tagline && (
-                  <p className="text-xl text-[#f59e0b] font-semibold mb-6">{product.tagline}</p>
+                  <p className="text-xl text-[#f59e0b] font-semibold mb-4">{product.tagline}</p>
+                )}
+
+                {!isFree && (
+                  <p className="text-base text-gray-300 italic mb-4 max-w-2xl">
+                    {getAuthorityLine(product.language)}
+                  </p>
                 )}
 
                 <p className="text-lg text-gray-400 mb-8 leading-relaxed max-w-2xl">
@@ -373,13 +395,13 @@ export default function ProductDetail({ user }) {
 
               {/* Sidebar Action Card */}
               <div className="lg:col-span-5">
-                <div className={`bg-[#141414] border rounded-3xl p-6 lg:p-8 shadow-2xl relative overflow-hidden group transition-colors ${isFree ? 'border-green-500/40 hover:border-green-500/80 shadow-[0_0_20px_rgba(34,197,94,0.1)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}>
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-${isFree ? 'green-500' : '[#f59e0b]'}/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-bl-full pointer-events-none`} />
-                  
-                  <div className={`aspect-[16/9] rounded-2xl bg-[#0a0a0a] border overflow-hidden mb-8 relative ${isFree ? 'border-green-500/30' : 'border-[#2a2a2a]'}`}>
+                <div className={`bg-[#141414] border rounded-3xl p-6 lg:p-8 shadow-2xl relative overflow-hidden group transition-colors ${isFree ? 'border-[#f59e0b]/40 hover:border-[#f59e0b]/80 shadow-[0_0_20px_rgba(245,158,11,0.1)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#f59e0b]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-bl-full pointer-events-none" />
+
+                  <div className={`aspect-[16/9] rounded-2xl bg-[#0a0a0a] border overflow-hidden mb-8 relative ${isFree ? 'border-[#f59e0b]/30' : 'border-[#2a2a2a]'}`}>
                     {isFree && (
-                      <div className="absolute top-4 left-4 bg-green-500 text-black px-3 py-1.5 rounded-lg text-sm font-black z-10 shadow-lg">
-                        🎁 Free
+                      <div className="absolute top-4 left-4 bg-[#f59e0b] text-black px-4 py-2 rounded-lg text-base font-black z-10 shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+                        🎁 {t('product.free')}
                       </div>
                     )}
                     {product.image_url ? (
@@ -398,21 +420,8 @@ export default function ProductDetail({ user }) {
                     </button>
                   </div>
 
-                  <div className="mb-8">
-                    <div className="flex items-end gap-2 mb-2">
-                      {isFree ? (
-                        <span className="text-4xl font-black text-green-500">{t('product.free')}</span>
-                      ) : (
-                        <>
-                          <span className="text-4xl font-black text-white">£{Number(product.price).toFixed(2)}</span>
-                          <span className="text-gray-400 text-lg line-through mb-1">£{(Number(product.price) * 1.5).toFixed(2)}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
                   {/* ── Action button — context-aware ── */}
-                  {renderCtaButton()}
+                  {renderCtaButton('', 0)}
                 </div>
               </div>
 
@@ -469,6 +478,15 @@ export default function ProductDetail({ user }) {
           </section>
         )}
 
+        {/* Mid-page CTA — paid products only, distinct phrase from hero/final */}
+        {!isFree && (
+          <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+            <div className="max-w-md mx-auto">
+              {renderCtaButton('', 1)}
+            </div>
+          </section>
+        )}
+
         {/* What You'll Receive */}
         {Array.isArray(product.what_you_learn) && product.what_you_learn.length > 0 && (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
@@ -498,6 +516,15 @@ export default function ProductDetail({ user }) {
                 <p className="text-gray-300 leading-relaxed mb-2">{product.guarantee_text}</p>
                 <p className="text-green-400 font-bold text-sm">{t('detail.guarantee_no_questions')}</p>
               </div>
+            </div>
+          </section>
+        )}
+
+        {/* CTA before FAQ — paid products only, distinct phrase */}
+        {!isFree && (
+          <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+            <div className="max-w-md mx-auto">
+              {renderCtaButton('', 2)}
             </div>
           </section>
         )}
@@ -557,11 +584,21 @@ export default function ProductDetail({ user }) {
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
           <div className="bg-gradient-to-b from-[#141414] to-[#0a0a0a] border border-[#2a2a2a] rounded-3xl p-8 lg:p-12 text-center">
             <h2 className="text-3xl font-black text-white mb-3">{t('detail.cta_final_heading')}</h2>
-            <p className="text-gray-400 mb-8">
-              {isFree ? t('product.free') : `£${Number(product.price).toFixed(2)}`}
-            </p>
+
+            {/* Objection elimination — honest, low-key trust signals right before the last CTA */}
+            {!isFree && (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 mb-8 mt-6">
+                {getObjections(product.language, guaranteeDays).map((objection, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm text-gray-400">
+                    <span className="text-lg">{objection.icon}</span>
+                    <span>{objection.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="max-w-md mx-auto">
-              {renderCtaButton('')}
+              {renderCtaButton('', 3)}
             </div>
             {product.guarantee_text && (
               <p className="text-sm text-gray-500 mt-4">{tf('detail.cta_final_guarantee', { days: guaranteeDays })}</p>
@@ -579,15 +616,15 @@ export default function ProductDetail({ user }) {
               {relatedProducts.map(rp => {
                 const rpIsFree = rp.is_free || parseFloat(rp.price) === 0 || !rp.price;
                 return (
-                  <div 
+                  <div
                     key={rp.id}
                     onClick={() => navigate(rpIsFree && !user ? '/login' : `/products/${rp.slug || rp.id}`)}
-                    className={`bg-[#141414] border rounded-2xl overflow-hidden cursor-pointer transition-colors group flex flex-col ${rpIsFree ? 'border-green-500/40 hover:border-green-500/80' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
+                    className={`bg-[#141414] border rounded-2xl overflow-hidden cursor-pointer transition-colors group flex flex-col ${rpIsFree ? 'border-[#f59e0b]/40 hover:border-[#f59e0b]/80' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
                   >
                     <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">
                       {rpIsFree && (
-                        <div className="absolute top-2 left-2 bg-green-500 text-black px-2 py-1 rounded text-sm font-black z-10 shadow-lg">
-                          🎁 Free
+                        <div className="absolute top-2 left-2 bg-[#f59e0b] text-black px-3 py-1.5 rounded-lg text-base font-black z-10 shadow-[0_0_16px_rgba(245,158,11,0.5)]">
+                          🎁 {t('product.free')}
                         </div>
                       )}
                       {rp.image_url ? (
@@ -602,13 +639,13 @@ export default function ProductDetail({ user }) {
                       </div>
                     </div>
                     <div className="p-5 flex flex-col flex-grow">
-                      <h3 className={`font-bold text-white mb-2 line-clamp-2 transition-colors ${rpIsFree ? 'group-hover:text-green-400' : 'group-hover:text-[#f59e0b]'}`}>{rp.title || rp.name}</h3>
+                      <h3 className="font-bold text-white mb-1 line-clamp-2 transition-colors group-hover:text-[#f59e0b]">{rp.title || rp.name}</h3>
+                      <p className={`text-xs font-medium mb-2 ${rpIsFree ? 'text-[#f59e0b]' : 'text-gray-500'}`}>
+                        {getTagline(rp.language, rpIsFree)}
+                      </p>
                       <p className="text-sm text-gray-400 line-clamp-2 mb-4 flex-grow">{rp.description}</p>
-                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#2a2a2a]">
-                        <span className="font-black text-white">
-                          {rpIsFree ? <span className="text-green-500">{t('product.free')}</span> : `£${Number(rp.price).toFixed(2)}`}
-                        </span>
-                        <span className={`font-bold text-sm px-3 py-1 rounded-lg ${rpIsFree ? 'text-green-500 bg-green-500/10' : 'text-[#f59e0b] bg-[#f59e0b]/10'}`}>
+                      <div className="mt-auto pt-4 border-t border-[#2a2a2a]">
+                        <span className="block text-center font-bold text-sm px-3 py-2 rounded-lg text-[#f59e0b] bg-[#f59e0b]/10 transition-all group-hover:shadow-[0_0_20px_rgba(245,158,11,0.55)] group-hover:bg-[#f59e0b]/20">
                           {t('product.learn_more')}
                         </span>
                       </div>

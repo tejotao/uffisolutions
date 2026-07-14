@@ -9,6 +9,7 @@ import Logo from '@/components/uffi/Logo';
 import { fetchAllProducts, fetchAllCategories, getCategoryIdsForProducts, logSearch } from '@/lib/catalogQueries';
 import { optimizedImageUrl } from '@/lib/imageUrl';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getTagline } from '@/lib/conversionCopy';
 
 export default function HomePage({ user }) {
   const [products, setProducts] = useState([]);
@@ -247,8 +248,8 @@ export default function HomePage({ user }) {
                       >
                         <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">
                           {isFree && (
-                            <div className="absolute top-2 left-2 bg-green-500 text-black px-2 py-1 rounded text-sm font-black z-10 shadow-lg">
-                              🎁 Free
+                            <div className="absolute top-2 left-2 bg-[#f59e0b] text-black px-3 py-1.5 rounded-lg text-base font-black z-10 shadow-[0_0_16px_rgba(245,158,11,0.5)]">
+                              🎁 {t('product.free')}
                             </div>
                           )}
                           {product.image_url ? (
@@ -263,13 +264,13 @@ export default function HomePage({ user }) {
                           </div>
                         </div>
                         <div className="p-5 flex flex-col flex-grow">
-                          <h3 className={`font-bold text-white mb-2 line-clamp-2 transition-colors ${isFree ? 'group-hover:text-green-400' : 'group-hover:text-[#f59e0b]'}`}>{product.title || product.name}</h3>
+                          <h3 className={`font-bold text-white mb-1 line-clamp-2 transition-colors ${isFree ? 'group-hover:text-[#f59e0b]' : 'group-hover:text-[#f59e0b]'}`}>{product.title || product.name}</h3>
+                          <p className={`text-xs font-medium mb-2 ${isFree ? 'text-[#f59e0b]' : 'text-gray-500'}`}>
+                            {getTagline(product.language, isFree)}
+                          </p>
                           <p className="text-sm text-gray-400 line-clamp-2 mb-4 flex-grow">{product.description}</p>
-                          <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#2a2a2a]">
-                            <span className="font-black text-white">
-                              {isFree ? <span className="text-green-500">{t('product.free')}</span> : `£${Number(product.price).toFixed(2)}`}
-                            </span>
-                            <span className={`font-bold text-sm px-3 py-1 rounded-lg ${isFree ? 'text-green-500 bg-green-500/10' : 'text-[#f59e0b] bg-[#f59e0b]/10'}`}>
+                          <div className="mt-auto pt-4 border-t border-[#2a2a2a]">
+                            <span className={`block text-center font-bold text-sm px-3 py-2 rounded-lg transition-all ${isFree ? 'text-[#f59e0b] bg-[#f59e0b]/10' : 'text-[#f59e0b] bg-[#f59e0b]/10 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.55)] group-hover:bg-[#f59e0b]/20'}`}>
                               {t('product.learn_more')}
                             </span>
                           </div>
