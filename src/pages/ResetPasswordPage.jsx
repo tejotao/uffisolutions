@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import Logo from '@/components/uffi/Logo';
 
 export default function ResetPasswordPage() {
@@ -21,14 +21,26 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     // Supabase sends recovery tokens as hash params (#access_token=...&type=recovery)
-    supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setValidSession(true);
     });
-    // Also check session directly
+
+    // Safety net: some mobile browser hand-off contexts (e.g. Gmail app's
+    // "open with Chrome" chooser on iPad) can leave getSession() hanging
+    // indefinitely, which otherwise stuck the user on the plain black
+    // loading screen forever with no error/fallback shown.
+    const timeout = setTimeout(() => setChecking(false), 6000);
+
     supabase.auth.getSession().then(({ data }) => {
       if (data?.session) setValidSession(true);
       setChecking(false);
+      clearTimeout(timeout);
     });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleSubmit = async (e) => {

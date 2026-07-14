@@ -13,7 +13,7 @@ import {
 } from '@/lib/catalogQueries';
 import { getProductAccessCounts } from '@/lib/accessQueries';
 import { getDeliverablesForProduct, getDeliverablesForProducts, replaceProductDeliverables, DELIVERABLE_PROVIDERS } from '@/lib/deliverableQueries';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { canAccess } from '@/lib/rolePermissions';
 import { cn } from '@/lib/utils';

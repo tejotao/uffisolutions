@@ -15,7 +15,7 @@ import { getUserRole, ROLES } from '@/lib/rolePermissions';
 import Footer from '@/components/uffi/Footer';
 import Logo from '@/components/uffi/Logo';
 import { logout } from '@/lib/supabaseAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, isAccessValid, daysUntilExpiry } from '@/lib/accessQueries';

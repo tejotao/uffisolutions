@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Loader2, LifeBuoy, Mail, Clock, CheckCircle2 } from 'lucide-react';
 import { createTicket, getMyTickets } from '@/lib/supportQueries';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 const SUPPORT_EMAIL = 'us@uffisolutions.com';

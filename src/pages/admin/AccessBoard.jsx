@@ -36,7 +36,7 @@ import {
   daysUntilExpiry,
 } from '@/lib/accessQueries';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, X, Tags, Check, Search, Filter, AlertTriangle } from 'lucide-react';
 import { fetchAllCategories, createCategory, updateCategory, deleteCategory, upsertCategoryTranslations } from '@/lib/catalogQueries';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { canAccess } from '@/lib/rolePermissions';
 

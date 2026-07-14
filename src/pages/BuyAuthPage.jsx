@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, ArrowLeft, Loader2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginWithEmail, signUpWithEmail } from '@/lib/supabaseAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateClientCode } from '@/lib/clientCodeGenerator';
 import Logo from '@/components/uffi/Logo';

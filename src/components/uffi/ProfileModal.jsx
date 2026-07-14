@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { X, Loader2, CheckCircle, Lock } from 'lucide-react';
 import { updateUser } from '@/lib/catalogQueries';
 import { updatePassword } from '@/lib/supabaseAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { getInitials } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 import { useLanguage } from '@/contexts/LanguageContext';

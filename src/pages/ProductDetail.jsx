@@ -9,7 +9,7 @@ import {
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, grantProductAccess } from '@/lib/accessQueries';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';

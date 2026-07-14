@@ -5,7 +5,7 @@ import { Mail, Lock, ArrowLeft, Loader2, X, CheckCircle, ShieldCheck } from 'luc
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginWithEmail } from '@/lib/supabaseAuth';
 import { supabase } from '@/lib/supabaseClient';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Logo from '@/components/uffi/Logo';
 

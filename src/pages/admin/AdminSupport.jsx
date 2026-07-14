@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LifeBuoy, AlertTriangle, Mail, CheckCircle, RotateCcw, Loader2, MessageSquare } from 'lucide-react';
 import { getAllTickets, resolveTicket, reopenTicket } from '@/lib/supportQueries';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { canAccess } from '@/lib/rolePermissions';
 import { cn } from '@/lib/utils';

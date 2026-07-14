@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { X, Loader2, CheckCircle, Contact } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { updateUser } from '@/lib/catalogQueries';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { getInitials, cn } from '@/lib/utils';
 
 const CLASSIFICATION_OPTIONS = ['VIP', 'Standard', 'Lead', 'At risk', 'Inactive'];
