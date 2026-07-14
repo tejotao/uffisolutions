@@ -1713,3 +1713,40 @@ Existiam dois hooks de toast completamente separados e desconectados: `src/hooks
 
 ### Publicado
 `staging` → `main` (fast-forward): `9ae13a6` (fix toast store + timeout reset de senha).
+
+---
+
+## Sessão 14/07/2026 (cont.) — Revamp de conversão: sem preços visíveis, checkout direto, checkout anônimo
+
+**Motivação:** usuário trouxe um pedido estratégico de conversão — tirar preço de todo lugar visível (exceto badge "Free" reforçado), eliminar objeções antes do checkout, e levar o visitante direto pro Stripe sem fricção.
+
+### Preço removido de todos os lugares visíveis
+Home (grid), landing page do produto (sidebar + CTA final) e produtos relacionados — sem preço, sem preço riscado. Produtos gratuitos mantêm um badge "Free" maior e **dourado** (era verde) — cor trocada de forma consistente em toda a UI de produto grátis (badge, borda do card, glow). Schema JSON-LD (`src/lib/productSchema.js`) **não foi tocado** — o preço continua lá pros rich results do Google, só não aparece na página.
+
+### Novo módulo `src/lib/conversionCopy.js`
+Centraliza todo o copy novo de conversão (tagline, frase de autoridade, objeções, variações de CTA, texto do produto grátis) — chaveado pelo **idioma do produto** (`product.language`), não pelo idioma do site (`useLanguage()`), com dicionário en/pt/es/it por string. Motivo: a landing page de um produto sempre mostra o conteúdo daquele produto no idioma dele, independente de qual idioma o visitante está navegando (confirmado revisando `ProductDetail.jsx` — o padrão já existente usa `product.title`/`product.description` direto do banco, nunca traduzidos em tempo real).
+
+### Landing page do produto — reforço de conversão (só produtos pagos)
+- Frase de autoridade após a tagline, antes da descrição.
+- Bloco de 3 ícones "eliminação de objeções" (🔒 pagamento seguro / ↩️ garantia de N dias — dinâmico via `product.guarantee_days` / ✉️ suporte) logo antes do CTA final.
+- 4 botões de compra espalhados pela página (hero, após seções, antes do FAQ, final) — cada um com uma frase diferente, nunca repete.
+- Produto grátis: CTA reescrito + linha "Sem cartão. Acesso imediato após cadastro." abaixo do botão.
+
+### Checkout anônimo — mudança arquitetural confirmada com o usuário antes de implementar
+Pedido original era ambíguo ("ir direto pro Stripe, sem pedir email") — o fluxo já ia direto pro Stripe pra quem estava logado; só usuários deslogados caíam num passo de login (`/start`) antes, porque o webhook depende de `client_reference_id=userId_productId` pra saber a quem liberar o acesso. Perguntado ao usuário como resolver — confirmado: **remover a trava de login também pra anônimos**, resolvendo a conta depois, pelo webhook.
+
+**Implementado:**
+- `ProductDetail.jsx`: `handleBuy()` sempre abre o Stripe direto. Logado → `client_reference_id=${userId}_${productId}` (como já era). Deslogado → `client_reference_id=anon_${productId}`.
+- `api/stripe-webhook.js`: `parseClientReferenceId()` (nova, compartilhada pelo handler principal e `handleRefund` — antes só um lugar parseava isso, o refund ficaria quebrado pra compras anônimas se não fosse corrigido junto) reconhece o prefixo `anon_`. `resolveUserIdForPurchase()` (nova) busca uma conta existente por email em `profiles`, ou cria uma nova via `supabase.auth.admin.inviteUserByEmail()` — que dispara o próprio email de convite do Supabase (SMTP do projeto, separado do Resend) apontando pra `/reset-password`, reaproveitando a tela que já existe (e que já tolera qualquer sessão válida, não só o evento `PASSWORD_RECOVERY` exato — por isso funciona sem confirmar qual evento exato o Supabase dispara num convite).
+- Limpeza: removido o mecanismo `uffi_pending_buy`/`autobuy` (`UserDashboard.jsx` + `ProductDetail.jsx`) — existia só pra retomar a compra depois do `/start`, que não existe mais nesse fluxo. Rota `/start`/`BuyAuthPage.jsx` não foi apagada (ainda acessível por URL direta), só ficou sem nenhum link apontando pra ela.
+
+**Efeito colateral aceito, não resolvido:** comprador anônimo novo recebe 2 emails (convite do Supabase pra definir senha + confirmação de compra do Resend, que aponta pro `/login`) — se ele clicar em "Access My Account" antes de definir a senha, cai num login que ainda não tem senha configurada. Funciona (a pessoa só precisa achar o email certo), mas não é o mais suave. Registrado como sugestão de polimento futuro.
+
+### Incidente à parte — Vercel não disparou o primeiro deploy
+Depois do primeiro push com as mudanças de copy (`f8c5cad`), a Vercel não postou nenhum status no GitHub por 15+ minutos (diferente de todo o resto da sessão, que sempre respondia em segundos) — o commit nunca apareceu nem na lista de Deployments. Não é webhook clássico (`gh api repos/.../hooks` retornou vazio — a integração é via GitHub App), então não deu pra inspecionar o log de entrega por aqui. Resolvido com um commit vazio (`543927b`) — disparou normal na sequência. Causa raiz não identificada (provável falha pontual de entrega do GitHub App).
+
+### Verificação
+`npm run lint` limpo (ambiente local anormalmente lento nessa sessão — build e lint chegaram a levar minutos por commit, sem relação com o código). Testado em `staging` antes de promover.
+
+### Publicado
+`staging` → `main` (fast-forward): `f8c5cad` (revamp de conversão — preços/copy), `543927b` (commit vazio, retry de deploy), `c3c0ac1` (checkout anônimo).
