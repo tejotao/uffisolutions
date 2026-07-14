@@ -1749,4 +1749,7 @@ Depois do primeiro push com as mudanças de copy (`f8c5cad`), a Vercel não post
 `npm run lint` limpo (ambiente local anormalmente lento nessa sessão — build e lint chegaram a levar minutos por commit, sem relação com o código). Testado em `staging` antes de promover.
 
 ### Publicado
-`staging` → `main` (fast-forward): `f8c5cad` (revamp de conversão — preços/copy), `543927b` (commit vazio, retry de deploy), `c3c0ac1` (checkout anônimo).
+`staging` → `main` (fast-forward): `f8c5cad` (revamp de conversão — preços/copy), `543927b` (commit vazio, retry de deploy), `c3c0ac1` (checkout anônimo), `0458c63` (personalização de email com nome do comprador + aviso de conta nova).
+
+### Follow-up — personalização de email + esclarecimento de conta nova
+A pedido do usuário (itens 1 e 2 da lista de sugestões extras da sessão anterior): `session.customer_details.name` (só populado se a coleta de nome/endereço estiver ligada no Payment Link do Stripe — graceful fallback pro texto genérico se não estiver) agora aparece no cumprimento do email de confirmação e na tabela do email do dono. E o email de confirmação para contas novas (criadas via checkout anônimo) ganhou um aviso extra explicando que existe um segundo email (o convite do Supabase) com o link pra definir a senha — antes o botão "Access My Account" apontava pro login sem deixar claro que a senha ainda não existia.
