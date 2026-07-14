@@ -1695,3 +1695,21 @@ Compra de teste completa no Preview, ponta a ponta: assinatura verificada (200 n
 
 ### Publicado
 `staging` → `main` (fast-forward): `32e55af` (feat emails), `646e623` (hotfix crash Resend), `d1efc7a` (fix upsert isolado), `792ad0a` (email comprador em inglês) — os dois commits de log de diagnóstico temporário (`3468c89`/`e3f4d73`) se cancelam, sem efeito líquido no código.
+
+---
+
+## Sessão 14/07/2026 — Bug de reset de senha no iPad + toasts de erro mudos em 15 telas
+
+**Motivação:** usuário reportou que no iPad o link de "esqueci minha senha" não abria a tela de nova senha (ficava tudo preto), e que login com senha errada não mostrava nenhum aviso ("fica sem ação").
+
+### Bug crítico — toast() disparado em 15 telas nunca aparecia na tela
+Existiam dois hooks de toast completamente separados e desconectados: `src/hooks/use-toast.js` (store própria, `memoryState`/`listeners` isolados) e `src/components/ui/use-toast.js` (store própria, `toastStore` isolado) — só o segundo é escutado pelo `<Toaster/>` de fato montado em `main.jsx`. 15 arquivos (`LoginPage`, `RegisterPage`, `ResetPasswordPage`, `ProductDetail`, `UserDashboard`, `BuyAuthPage`, `SupabaseAuthContext`, `ProfileModal`, `UserProfileModal`, `SupportModal`, `AdminUsers`, `AdminProducts`, `AdminCategories`, `AdminSupport`, `AccessBoard`) importavam o hook errado — todo `toast()` chamado neles ia pra uma store que ninguém escutava, sem erro nenhum no console, sem nada visível. Explica o caso relatado (login com senha errada silencioso) e provavelmente outros avisos "mudos" pelo site inteiro até aqui. Corrigido reapontando os 15 imports pro hook que o `Toaster` realmente escuta, e apagado `src/hooks/use-toast.js` (órfão, sem mais nenhuma referência).
+
+### Bug — tela de reset de senha travava em preto sólido no iPad
+`ResetPasswordPage.jsx` mostra uma tela 100% preta com um spinner enquanto confere `supabase.auth.getSession()`, sem nenhum limite de tempo — se essa chamada travasse (reproduzido no relato do usuário: Gmail app no iPad → escolher "abrir com Chrome" → handoff que parece restringir acesso a storage), a tela ficava presa nesse preto pra sempre, nunca chegando nem no formulário nem na mensagem de "link expirado" que já existia como fallback. Adicionado timeout de 6s que força a checagem a resolver de um jeito ou de outro.
+
+### Verificação
+`npm run lint` limpo antes de cada deploy. Validado em `staging` (Preview) antes de promover.
+
+### Publicado
+`staging` → `main` (fast-forward): `9ae13a6` (fix toast store + timeout reset de senha).
