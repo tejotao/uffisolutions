@@ -1753,3 +1753,33 @@ Depois do primeiro push com as mudanças de copy (`f8c5cad`), a Vercel não post
 
 ### Follow-up — personalização de email + esclarecimento de conta nova
 A pedido do usuário (itens 1 e 2 da lista de sugestões extras da sessão anterior): `session.customer_details.name` (só populado se a coleta de nome/endereço estiver ligada no Payment Link do Stripe — graceful fallback pro texto genérico se não estiver) agora aparece no cumprimento do email de confirmação e na tabela do email do dono. E o email de confirmação para contas novas (criadas via checkout anônimo) ganhou um aviso extra explicando que existe um segundo email (o convite do Supabase) com o link pra definir a senha — antes o botão "Access My Account" apontava pro login sem deixar claro que a senha ainda não existia.
+
+---
+
+## Sessão 15/07/2026 — Auditoria de SEO + Organization JSON-LD + fixes de crawling
+
+**Motivação:** usuário pediu uma auditoria técnica de SEO/performance (meta tags, Schema.org, crawlability, gaps) e depois pediu pra executar as correções em 3 fases: identidade legal (Organization), crawling técnico (robots/llms.txt/catálogo), e uma análise de viabilidade de pré-renderizar a Home.
+
+### Auditoria (antes de mexer em qualquer código)
+Confirmado por leitura direta do código (não por memória): `react-helmet` só ativo em `App.jsx` (genérico, toda rota) e `ProductDetail.jsx` (por produto); `productSchema.js` já cobria Product/FAQ/Breadcrumb, mas nada em nível de site/Organization; site é SPA 100% client-side (`main.jsx` usa `createRoot`, sem SSR), com uma única exceção real de pré-renderização: `prerender-product-meta.js` gera HTML estático por produto — Home, catálogo e categorias continuam 100% dependentes de JS. Achado concreto ao testar o `llms.txt` gerado: só tinha 1 entrada, `"Untitled Page" — /products/:id`, sem descrição — o extrator regex-based não lê JSX com variáveis dinâmicas (`{pageTitle}`), então nunca funcionou pra página de produto.
+
+### Fase 1 — `src/config/legal.js` + Organization JSON-LD
+Novo arquivo centraliza identidade pública da empresa (marca, razão social "Uffisphere HTJS Ltd", CRN 16827147, endereço registrado, `sameAs` pra uffisphere.com/hubukbox.com) — deliberadamente sem nada financeiro/bancário/HMRC, por instrução explícita do usuário, já que esse arquivo é lido pelo frontend. `src/lib/siteSchema.js` gera o Organization JSON-LD a partir dele (`name`=marca, `legalName`=holding, `taxID`=CRN), injetado na `Helmet` já existente em `App.jsx` — site-wide, não só produto. Validado com navegador real (chrome-devtools MCP) em produção, não só `curl` (que não mostra nada aqui, já que é injetado client-side).
+
+### Fase 2 — crawling técnico
+- `robots.txt`: adicionado `Disallow: /admin`, `/dashboard`, `/library`.
+- `tools/generate-llms.js`: reescrito pra buscar produtos ativos direto do Supabase (mesmo padrão do `generate-sitemap.js`) em vez de tentar ler o Helmet dinâmico do `ProductDetail.jsx`. Resultado: 15 produtos reais com título/descrição de verdade, em vez de 1 entrada "Untitled Page". **Efeito colateral pego a tempo**: o Helmet novo adicionado no `ProductsPage.jsx` (item seguinte) caiu no mesmo problema — corrigido excluindo as duas páginas do scraping regex-based e gerando as entradas delas manualmente (produtos reais do Supabase; `/products` a partir das chaves de tradução já usadas no H1 da própria página).
+- `ProductsPage.jsx` (catálogo) ganhou `Helmet` próprio (título/descrição, antes herdava o genérico de `App.jsx`) + JSON-LD `CollectionPage`.
+- Refactor DRY: `loadLocalEnv()` estava duplicada em `generate-sitemap.js` e `prerender-product-meta.js`; como o `generate-llms.js` precisaria de uma terceira cópia, foi extraída pra `tools/lib/loadLocalEnv.js`, importada pelos três.
+
+### Fase 3 — viabilidade de pré-renderizar a Home (análise, sem código)
+Resposta dada ao usuário: replicar o padrão do produto na Home tem esforço baixo mas ganho quase nulo (a Home já tem meta tags estáticos, não há nada dinâmico ali pra trocar) — o gap real é o *conteúdo* (grid de produtos) só existir depois do JS rodar, o que exigiria gerar markup de verdade no build (esforço médio-alto), não só trocar tags. Recomendado confirmar via Search Console se isso realmente custa alguma coisa antes de investir nesse nível 2.
+
+### Achado à parte, não corrigido — `ProductsPage.jsx` (catálogo) ainda mostra preço
+A revisão de "sem preços visíveis" de uma sessão anterior só cobriu os cards da Home (`HomePage.jsx`) — o card do catálogo (`/products`, arquivo separado, markup próprio) nunca foi tocado e ainda mostra `£X.XX`. Fora do escopo desta sessão (focada em SEO), reportado ao usuário pra decidir se quer alinhar.
+
+### Verificação
+Deploy validado em `staging` e `main` via GitHub API; Organization + CollectionPage JSON-LD conferidos ao vivo em produção com navegador real (chrome-devtools MCP), não só `curl`. `robots.txt`/`llms.txt` conferidos via `curl` direto em produção.
+
+### Publicado
+`staging` → `main` (fast-forward): `6527f57`.
