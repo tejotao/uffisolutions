@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, CheckCircle } from 'lucide-react';
@@ -10,6 +11,9 @@ import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses } from '@/lib/accessQueries';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { optimizedImageUrl } from '@/lib/imageUrl';
+import { buildCollectionPageSchema } from '@/lib/siteSchema';
+
+const SITE_URL = 'https://www.uffisolutions.com';
 
 export default function ProductsPage({ user }) {
   const [products, setProducts] = useState([]);
@@ -90,9 +94,22 @@ export default function ProductsPage({ user }) {
     return '🌐';
   };
 
+  const pageTitle = `${t('products.title')} — UffiSolutions`;
+  const collectionSchema = buildCollectionPageSchema({
+    name: t('products.title'),
+    description: t('products.subtitle'),
+    url: `${SITE_URL}/products`,
+  });
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
-      <Header 
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={t('products.subtitle')} />
+        <link rel="canonical" href={`${SITE_URL}/products`} />
+        <script type="application/ld+json">{JSON.stringify(collectionSchema)}</script>
+      </Helmet>
+      <Header
         user={user}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

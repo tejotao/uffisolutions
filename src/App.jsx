@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet';
 
 import { getCurrentUserWithRole, onAuthStateChange } from '@/lib/supabaseAuth';
 import { isSuperAdmin } from '@/lib/rolePermissions';
+import { buildOrganizationSchema } from '@/lib/siteSchema';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
@@ -101,6 +102,12 @@ function App() {
       <Helmet>
         <title>UffiSolutions | Digital Courses & Guides for International Entrepreneurs</title>
         <meta name="description" content="Step-by-step guides for building an international life — shopping, importing, travel and AI tools. Available in 4 languages." />
+        {/* Site-wide Organization entity — established here (not per-page)
+            so Google associates it with the domain regardless of which
+            route it crawls; ProductDetail's own Helmet (rendered later in
+            the tree, on product pages only) adds Product/FAQ/Breadcrumb
+            JSON-LD on top of this, it doesn't replace it. */}
+        <script type="application/ld+json">{JSON.stringify(buildOrganizationSchema())}</script>
       </Helmet>
       <Router>
         <Suspense fallback={<RouteFallback />}>

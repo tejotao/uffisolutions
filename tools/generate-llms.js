@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from '@babel/parser';
 import traverseModule from '@babel/traverse';
+import { createClient } from '@supabase/supabase-js';
+import { loadLocalEnv } from './lib/loadLocalEnv.js';
+import { translations } from '../src/lib/translations.js';
 
 // @babel/traverse's default export shape differs between ESM and CJS
 // interop — this project's own plugins/utils/ast-utils.js hits the same
@@ -220,6 +223,39 @@ function ensureDirectoryExists(dirPath) {
   }
 }
 
+// ProductDetail.jsx's own <Helmet> uses dynamic variables ({pageTitle},
+// {pageDescription}), not literal strings — extractHelmetData's regex-based
+// extraction can't read those, so it used to produce one useless entry
+// ("Untitled Page" at the literal route template /products/:id) instead of
+// real per-product content. Fetching the actual active products here and
+// generating one real entry per product/slug replaces that broken entry
+// with the content llms.txt is actually meant to describe. Same env-var
+// pattern as tools/generate-sitemap.js; best-effort like the rest of this
+// script — a fetch failure just means the static pages still get written.
+async function fetchActiveProducts() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    console.warn('[generate-llms] Missing Supabase credentials — skipping product pages.');
+    return [];
+  }
+  const supabase = createClient(url, key);
+  const { data, error } = await supabase
+    .from('products')
+    .select('slug, title, name, hero_description, description')
+    .eq('active', true)
+    .not('slug', 'is', null);
+  if (error) {
+    console.warn('[generate-llms] Failed to fetch products:', error.message);
+    return [];
+  }
+  return (data || []).map((p) => ({
+    url: `/products/${p.slug}`,
+    title: p.title || p.name || 'Untitled Product',
+    description: (p.hero_description || p.description || '').slice(0, 160) || 'No description available',
+  }));
+}
+
 function processPageFile(filePath, routes) {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
@@ -230,39 +266,62 @@ function processPageFile(filePath, routes) {
   }
 }
 
-function main() {
+async function main() {
+  loadLocalEnv();
+
   const pagesDir = path.join(process.cwd(), 'src', 'pages');
   const appJsxPath = path.join(process.cwd(), 'src', 'App.jsx');
 
   let pages = [];
-  
+
   if (!fs.existsSync(pagesDir)) {
     pages.push(processPageFile(appJsxPath, []))
     pages = pages.filter(Boolean);
   } else {
     const routes = extractRoutes(appJsxPath);
-    const reactFiles = findReactFiles(pagesDir);
+    // ProductDetail.jsx and ProductsPage.jsx are excluded here — both build
+    // their <title>/<meta description> from JS expressions ({pageTitle},
+    // {t('products.subtitle')}, ...), not literal strings, which the
+    // regex-based extraction below can't read (it always fell back to
+    // "Untitled Page"). Real content for both comes from translations.js /
+    // fetchActiveProducts() instead, added manually below.
+    const reactFiles = findReactFiles(pagesDir)
+      .filter((filePath) => !['ProductDetail.jsx', 'ProductsPage.jsx'].includes(path.basename(filePath)));
 
     pages = reactFiles
       .map(filePath => processPageFile(filePath, routes))
       .filter(Boolean);
   }
 
+  // English is this project's default/fallback site language (see
+  // src/lib/translations.js's own getTranslation() fallback order) —
+  // reusing the same source of truth rather than duplicating the copy here.
+  pages.push({
+    url: '/products',
+    title: `${translations.en['products.title']} — UffiSolutions`,
+    description: translations.en['products.subtitle'],
+  });
+
+  const productPages = await fetchActiveProducts();
+  pages = [...pages, ...productPages];
+
   if (pages.length === 0) {
-    console.error('❌ No pages with Helmet components found!');
+    console.error('❌ No pages found!');
     process.exit(1);
   }
 
-
   const llmsTxtContent = generateLlmsTxt(pages);
   const outputPath = path.join(process.cwd(), 'public', 'llms.txt');
-  
+
   ensureDirectoryExists(path.dirname(outputPath));
   fs.writeFileSync(outputPath, llmsTxtContent, 'utf8');
+  console.log(`[generate-llms] Wrote ${pages.length} pages (${productPages.length} products) to public/llms.txt`);
 }
 
 const isMainModule = import.meta.url === `file://${process.argv[1]}`;
 
 if (isMainModule) {
-  main();
+  main().catch((err) => {
+    console.warn('[generate-llms] Non-fatal error:', err.message);
+  });
 }

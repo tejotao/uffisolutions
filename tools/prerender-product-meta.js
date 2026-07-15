@@ -22,25 +22,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import { buildProductSchema, buildFaqSchema, buildBreadcrumbSchema, getOgLocale } from '../src/lib/productSchema.js';
+import { loadLocalEnv } from './lib/loadLocalEnv.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const BASE_HTML_PATH = path.join(DIST_DIR, 'index.html');
 const SITE_URL = 'https://www.uffisolutions.com';
-
-function loadLocalEnv() {
-  const envPath = path.join(__dirname, '..', '.env.local');
-  if (!fs.existsSync(envPath)) return;
-  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-  for (const line of lines) {
-    const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)\s*$/);
-    if (!match) continue;
-    const [, key, rawValue] = match;
-    if (process.env[key] === undefined) {
-      process.env[key] = rawValue.replace(/^["']|["']$/g, '');
-    }
-  }
-}
 
 // Product text is admin-authored free text — must be escaped before going
 // into HTML attribute/text context (an "&" or `"` in a tagline would

@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /library
+
 Sitemap: https://www.uffisolutions.com/sitemap.xml

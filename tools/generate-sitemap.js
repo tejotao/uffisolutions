@@ -11,28 +11,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import { getHreflang } from '../src/lib/productSchema.js';
+import { loadLocalEnv } from './lib/loadLocalEnv.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SITE_URL = 'https://www.uffisolutions.com';
 const OUTPUT_PATH = path.join(__dirname, '..', 'public', 'sitemap.xml');
-
-// Vite only injects VITE_-prefixed vars into import.meta.env for client code —
-// this plain Node script needs them in process.env instead. Vercel already
-// exposes project env vars that way during the build step; for local builds,
-// fall back to reading .env.local directly.
-function loadLocalEnv() {
-  const envPath = path.join(__dirname, '..', '.env.local');
-  if (!fs.existsSync(envPath)) return;
-  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-  for (const line of lines) {
-    const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)\s*$/);
-    if (!match) continue;
-    const [, key, rawValue] = match;
-    if (process.env[key] === undefined) {
-      process.env[key] = rawValue.replace(/^["']|["']$/g, '');
-    }
-  }
-}
 
 const STATIC_ROUTES = [
   { loc: '/', priority: '1.0', changefreq: 'weekly' },
