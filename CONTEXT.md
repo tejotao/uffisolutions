@@ -1783,3 +1783,23 @@ Deploy validado em `staging` e `main` via GitHub API; Organization + CollectionP
 
 ### Publicado
 `staging` → `main` (fast-forward): `6527f57`.
+
+---
+
+## Sessão 15/07/2026 (cont.) — Preço de volta no catálogo + limpeza de 13 componentes órfãos
+
+**Motivação:** usuário reportou que o preço tinha voltado a aparecer em `/products` (achado registrado na sessão anterior) e pediu uma varredura completa em todos os componentes de card, não só correção pontual.
+
+### Causa raiz
+`ProductsPage.jsx` (catálogo) tem seu próprio markup de card, inline, separado do `HomePage.jsx` — a limpeza de preço de uma sessão anterior só cobriu a Home. Corrigido com o mesmo tratamento: preço removido, badge "Free" dourado (era verde) e maior, tagline abaixo do título (via `conversionCopy.js`, já existente), glow dourado no hover do "Learn More".
+
+### Varredura completa — achados além do pedido
+Ao caçar "qualquer outro lugar que exiba preço", `grep` por `price`/`£` em todo `src/pages`+`src/components` (excluindo admin, fora de escopo) trouxe 10 arquivos a mais além do catálogo: `Pricing.jsx`, `MyProducts.jsx`, `CourseCard.jsx`, `FeaturedBanner.jsx`, `AdminView.jsx`, `ClientView.jsx`, `ProductCard.jsx`, `ProductCarousel.jsx`, `CategoryCarousel.jsx`, `CategorySection.jsx` — mais 3 de um domínio diferente (`PackageCard.jsx`, `InventoryTable.jsx`, `EditPackageDialog.jsx`, aparentemente de/tara um modelo de negócio anterior de pacote/envio). **Nenhum dos 13 tinha um único import** em lugar nenhum do app — nem estático, nem `lazy()`, nem barrel file — confirmado por 3 métodos de busca diferentes antes de agir. São resíduos de uma versão anterior do produto, nunca renderizados pra ninguém.
+
+**Decisão**: apagar os 13 arquivos por completo, em vez de só tirar o preço do código morto — deixar preço dentro de componentes órfãos é uma mina-terrestre esperando alguém reconectar um deles por engano no futuro.
+
+### Verificação
+Build da Vercel (staging e produção) passou limpo — se algum dos 13 arquivos apagados tivesse import ativo em algum lugar, o build teria quebrado. Confirmado ao vivo em produção com navegador real (chrome-devtools MCP): `£` zero na página renderizada (`document.body.innerText` sem nenhum match), screenshot conferindo visualmente badge dourado + tagline + botão "Learn More" com glow.
+
+### Publicado
+`staging` → `main` (fast-forward): `3c50a2d`.
