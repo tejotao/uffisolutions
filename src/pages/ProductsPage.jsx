@@ -12,6 +12,7 @@ import { getMyActiveAccesses } from '@/lib/accessQueries';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { optimizedImageUrl } from '@/lib/imageUrl';
 import { buildCollectionPageSchema } from '@/lib/siteSchema';
+import { getTagline } from '@/lib/conversionCopy';
 
 const SITE_URL = 'https://www.uffisolutions.com';
 
@@ -155,14 +156,14 @@ export default function ProductsPage({ user }) {
                       transition={{ delay: index * 0.05 }}
                     >
                       <div
-                        className={`bg-[#141414] border rounded-2xl overflow-hidden transition-colors group flex flex-col h-full cursor-pointer ${isFree ? 'border-green-500/40 hover:border-green-500/80 shadow-[0_0_15px_rgba(34,197,94,0.05)] hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
+                        className={`bg-[#141414] border rounded-2xl overflow-hidden transition-colors group flex flex-col h-full cursor-pointer ${isFree ? 'border-[#f59e0b]/40 hover:border-[#f59e0b]/80 shadow-[0_0_15px_rgba(245,158,11,0.05)] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
                         onClick={() => navigate(`/products/${product.slug || product.id}`)}
                       >
                         <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">
                           {/* Free badge */}
                           {isFree && !inLibrary && (
-                            <div className="absolute top-2 left-2 bg-green-500 text-black px-2 py-1 rounded text-sm font-black z-10 shadow-lg">
-                              🎁 Free
+                            <div className="absolute top-2 left-2 bg-[#f59e0b] text-black px-3 py-1.5 rounded-lg text-base font-black z-10 shadow-[0_0_16px_rgba(245,158,11,0.5)]">
+                              🎁 {t('product.free')}
                             </div>
                           )}
                           {/* In Library badge */}
@@ -183,15 +184,15 @@ export default function ProductsPage({ user }) {
                           </div>
                         </div>
                         <div className="p-5 flex flex-col flex-grow">
-                          <h3 className={`font-bold text-white mb-2 line-clamp-2 transition-colors ${inLibrary ? 'group-hover:text-amber-400' : isFree ? 'group-hover:text-green-400' : 'group-hover:text-[#f59e0b]'}`}>
+                          <h3 className={`font-bold text-white mb-1 line-clamp-2 transition-colors ${inLibrary ? 'group-hover:text-amber-400' : 'group-hover:text-[#f59e0b]'}`}>
                             {product.title || product.name}
                           </h3>
+                          <p className={`text-xs font-medium mb-2 ${isFree ? 'text-[#f59e0b]' : 'text-gray-500'}`}>
+                            {getTagline(product.language, isFree)}
+                          </p>
                           <p className="text-sm text-gray-400 line-clamp-2 mb-4 flex-grow">{product.description}</p>
-                          <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#2a2a2a]">
-                            <span className="font-black text-white">
-                              {isFree ? <span className="text-green-500">{t('product.free')}</span> : `£${Number(product.price).toFixed(2)}`}
-                            </span>
-                            <span className={`font-bold text-sm px-3 py-1 rounded-lg flex items-center gap-1 ${inLibrary ? 'text-amber-400 bg-amber-500/10' : isFree ? 'text-green-500 bg-green-500/10' : 'text-[#f59e0b] bg-[#f59e0b]/10'}`}>
+                          <div className="mt-auto pt-4 border-t border-[#2a2a2a]">
+                            <span className={`block text-center font-bold text-sm px-3 py-2 rounded-lg flex items-center justify-center gap-1 transition-all ${inLibrary ? 'text-amber-400 bg-amber-500/10' : 'text-[#f59e0b] bg-[#f59e0b]/10 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.55)] group-hover:bg-[#f59e0b]/20'}`}>
                               {inLibrary ? <><CheckCircle size={11} /> Access</> : t('product.learn_more')}
                             </span>
                           </div>
