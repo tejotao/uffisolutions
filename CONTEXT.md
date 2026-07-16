@@ -1803,3 +1803,28 @@ Build da Vercel (staging e produção) passou limpo — se algum dos 13 arquivos
 
 ### Publicado
 `staging` → `main` (fast-forward): `3c50a2d`.
+
+---
+
+## Sessão 15/07/2026 (cont.) — Organização de email + hover reveal nos cards
+
+### `EMAIL_TEMPLATES.html` movido e corrigido
+Arquivo solto na raiz (presente desde antes de várias sessões) movido pra `src/emails/auth-confirmation.html` — é um template de referência pro editor de Email Templates do Supabase Dashboard, não é lido por nenhum código do projeto. Na revisão, achado logo dizendo "UffiSphere" (a holding legal) em vez de "UffiSolutions" (a marca real) e cor de destaque azul em vez do dourado `#f59e0b` padrão do resto do projeto — os dois corrigidos.
+
+### Hover reveal nos cards de produto + destaque de produto grátis
+Pedido: cards mostram só imagem+título+idioma por padrão, revelam descrição+botão só no hover (desktop) ou sempre (mobile/tablet), com CSS puro. Produtos grátis ganham borda dourada `#C9A84C`, glow e badge "FREE" com pulse suave.
+
+**Novo componente compartilhado** `src/components/catalog/ProductGridCard.jsx` — substitui as duas implementações quase-idênticas que existiam separadas em `HomePage.jsx` (grid) e `ProductsPage.jsx` (catálogo). Motivo direto: essa duplicação foi exatamente a causa do bug da sessão anterior (fix de preço aplicado só na Home, esquecido no catálogo) — com um componente só, os dois grids não têm mais como divergir de novo.
+
+Implementação: `opacity-100 md:opacity-0 md:group-hover:opacity-100` no overlay escuro e no bloco de descrição+CTA — sem breakpoint `md:`, o conteúdo fica sempre visível (mobile); a partir de `md:`, some por padrão e só aparece no `:hover` real. Scale sutil (`md:hover:scale-[1.02]`) só no desktop, evitando o efeito preso de `:hover` que toques em touchscreen costumam causar. Pulse do badge "FREE" é um `@keyframes` novo em `index.css` (`free-badge-pulse`, variação de intensidade do `box-shadow`) em vez do `animate-pulse` padrão do Tailwind, que pisca opacidade — não bate com "pulse suave" pedido.
+
+**Escopo**: aplicado no grid da Home, catálogo `/products` (via componente compartilhado) e no marquee da Home (só borda/glow dourado — o pill de 256px do marquee não comporta descrição+botão de hover-reveal, decisão explicada ao usuário). Produtos relacionados em `ProductDetail.jsx` não foram tocados (fora da lista de locais pedida). A tagline por produto (`conversionCopy.js`, adicionada duas sessões atrás) foi removida desses três locais — a lista de conteúdo do novo spec não a inclui em nenhum dos dois estados (normal ou hover), e uma 3ª linha de texto competia com o visual mais minimalista pedido.
+
+### Achado à parte — disco em 98% de uso
+Toda a lentidão anormal de `lint`/`build` local ao longo das últimas sessões (comandos rodando minutos com pouquíssimo uso de CPU) tinha uma causa concreta: `df -h` mostrou o disco com só 4.6GB livres (98% cheio). Não afeta os deploys (rodam no ambiente da Vercel), só o fluxo de verificação local — recomendado ao usuário liberar espaço em disco.
+
+### Verificação
+Testado ao vivo em produção com navegador real (chrome-devtools MCP) em 3 larguras: 1440px (hover real testado via `hover()` — overlay, descrição, botão e título dourado aparecem só no card sob o mouse, confirmado por screenshot antes/depois), 390px (mobile — conteúdo sempre expandido, confirmado), e catálogo `/products` (mesmo tratamento, mesmo componente).
+
+### Publicado
+`166fd7a` (mover/corrigir template de email), `3a8ebd3` (hover reveal + destaque grátis) — `staging` → `main` (fast-forward).
