@@ -3,16 +3,14 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Play, CheckCircle } from 'lucide-react';
 import Header from '@/components/uffi/Header';
 import Footer from '@/components/uffi/Footer';
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses } from '@/lib/accessQueries';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { optimizedImageUrl } from '@/lib/imageUrl';
 import { buildCollectionPageSchema } from '@/lib/siteSchema';
-import { getTagline } from '@/lib/conversionCopy';
+import ProductGridCard from '@/components/catalog/ProductGridCard';
 
 const SITE_URL = 'https://www.uffisolutions.com';
 
@@ -85,16 +83,6 @@ export default function ProductsPage({ user }) {
     });
   }, [products, searchQuery, language, showAllProducts]);
 
-  const getLanguageFlag = (lang) => {
-    if (!lang) return '🌐';
-    const l = lang.toLowerCase();
-    if (l.includes('pt-br') || l === 'pt') return '🇧🇷';
-    if (l.includes('en')) return '🇬🇧';
-    if (l.includes('es')) return '🇪🇸';
-    if (l.includes('it')) return '🇮🇹';
-    return '🌐';
-  };
-
   const pageTitle = `${t('products.title')} — UffiSolutions`;
   const collectionSchema = buildCollectionPageSchema({
     name: t('products.title'),
@@ -155,49 +143,13 @@ export default function ProductsPage({ user }) {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <div
-                        className={`bg-[#141414] border rounded-2xl overflow-hidden transition-colors group flex flex-col h-full cursor-pointer ${isFree ? 'border-[#f59e0b]/40 hover:border-[#f59e0b]/80 shadow-[0_0_15px_rgba(245,158,11,0.05)] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
+                      <ProductGridCard
+                        product={product}
+                        isFree={isFree}
+                        inLibrary={inLibrary}
+                        learnMoreLabel={t('product.learn_more')}
                         onClick={() => navigate(`/products/${product.slug || product.id}`)}
-                      >
-                        <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">
-                          {/* Free badge */}
-                          {isFree && !inLibrary && (
-                            <div className="absolute top-2 left-2 bg-[#f59e0b] text-black px-3 py-1.5 rounded-lg text-base font-black z-10 shadow-[0_0_16px_rgba(245,158,11,0.5)]">
-                              🎁 {t('product.free')}
-                            </div>
-                          )}
-                          {/* In Library badge */}
-                          {inLibrary && (
-                            <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-500 text-black px-2 py-1 rounded text-xs font-black z-10 shadow-lg">
-                              <CheckCircle size={11} /> In Library
-                            </div>
-                          )}
-                          {product.image_url ? (
-                            <img src={optimizedImageUrl(product.image_url, { width: 560, height: 315 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
-                              <Play size={32} className="text-[#2a2a2a]" />
-                            </div>
-                          )}
-                          <div className="absolute top-2 right-2 bg-black/60 backdrop-blur px-2 py-1 rounded text-2xl shadow-sm z-10">
-                            {getLanguageFlag(product.language)}
-                          </div>
-                        </div>
-                        <div className="p-5 flex flex-col flex-grow">
-                          <h3 className={`font-bold text-white mb-1 line-clamp-2 transition-colors ${inLibrary ? 'group-hover:text-amber-400' : 'group-hover:text-[#f59e0b]'}`}>
-                            {product.title || product.name}
-                          </h3>
-                          <p className={`text-xs font-medium mb-2 ${isFree ? 'text-[#f59e0b]' : 'text-gray-500'}`}>
-                            {getTagline(product.language, isFree)}
-                          </p>
-                          <p className="text-sm text-gray-400 line-clamp-2 mb-4 flex-grow">{product.description}</p>
-                          <div className="mt-auto pt-4 border-t border-[#2a2a2a]">
-                            <span className={`block text-center font-bold text-sm px-3 py-2 rounded-lg flex items-center justify-center gap-1 transition-all ${inLibrary ? 'text-amber-400 bg-amber-500/10' : 'text-[#f59e0b] bg-[#f59e0b]/10 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.55)] group-hover:bg-[#f59e0b]/20'}`}>
-                              {inLibrary ? <><CheckCircle size={11} /> Access</> : t('product.learn_more')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      />
                     </motion.div>
                   );
                 })}

@@ -94,3 +94,14 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Subtle breathing glow for the "FREE" product badge — a soft shadow
+   intensity shift rather than Tailwind's built-in animate-pulse (opacity
+   flicker), which read as too abrupt for this. */
+@keyframes free-badge-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(201, 168, 76, 0.5); }
+  50%      { box-shadow: 0 0 10px rgba(201, 168, 76, 0.9); }
+}
+.animate-free-pulse {
+  animation: free-badge-pulse 2.4s ease-in-out infinite;
+}

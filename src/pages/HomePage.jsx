@@ -9,7 +9,7 @@ import Logo from '@/components/uffi/Logo';
 import { fetchAllProducts, fetchAllCategories, getCategoryIdsForProducts, logSearch } from '@/lib/catalogQueries';
 import { optimizedImageUrl } from '@/lib/imageUrl';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getTagline } from '@/lib/conversionCopy';
+import ProductGridCard from '@/components/catalog/ProductGridCard';
 
 export default function HomePage({ user }) {
   const [products, setProducts] = useState([]);
@@ -164,25 +164,28 @@ export default function HomePage({ user }) {
               animate={{ x: ['0%', '-50%'] }}
               transition={{ duration: marqueeProducts.length * 4, repeat: Infinity, ease: 'linear' }}
             >
-              {[...marqueeProducts, ...marqueeProducts].map((product, idx) => (
-                <div
-                  key={`${product.id}-${idx}`}
-                  onClick={() => navigate(`/products/${product.slug || product.id}`)}
-                  className="flex items-center gap-2.5 bg-[#141414] border border-[#2a2a2a] rounded-xl pl-2 pr-4 py-2 cursor-pointer hover:border-[#f59e0b]/50 transition-colors shrink-0 w-64"
-                >
-                  <div className="w-9 h-9 rounded-lg overflow-hidden bg-[#1a1a1a] shrink-0">
-                    {product.image_url ? (
-                      <img src={optimizedImageUrl(product.image_url, { width: 80, height: 80 })} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Play size={14} className="text-[#2a2a2a]" />
-                      </div>
-                    )}
+              {[...marqueeProducts, ...marqueeProducts].map((product, idx) => {
+                const isFree = product.is_free || parseFloat(product.price) === 0 || !product.price;
+                return (
+                  <div
+                    key={`${product.id}-${idx}`}
+                    onClick={() => navigate(`/products/${product.slug || product.id}`)}
+                    className={`flex items-center gap-2.5 bg-[#141414] border rounded-xl pl-2 pr-4 py-2 cursor-pointer transition-colors shrink-0 w-64 ${isFree ? 'border-[#C9A84C] shadow-[0_0_15px_rgba(201,168,76,0.4)] hover:border-[#C9A84C]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
+                  >
+                    <div className="w-9 h-9 rounded-lg overflow-hidden bg-[#1a1a1a] shrink-0">
+                      {product.image_url ? (
+                        <img src={optimizedImageUrl(product.image_url, { width: 80, height: 80 })} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Play size={14} className="text-[#2a2a2a]" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-base leading-none shrink-0">{getLanguageFlag(product.language)}</span>
+                    <span className="text-sm text-white font-semibold truncate">{product.title || product.name}</span>
                   </div>
-                  <span className="text-base leading-none shrink-0">{getLanguageFlag(product.language)}</span>
-                  <span className="text-sm text-white font-semibold truncate">{product.title || product.name}</span>
-                </div>
-              ))}
+                );
+              })}
             </motion.div>
           </div>
         )}
@@ -233,7 +236,7 @@ export default function HomePage({ user }) {
               <AnimatePresence mode="popLayout">
                 {filteredProducts.map((product, index) => {
                   const isFree = product.is_free || parseFloat(product.price) === 0 || !product.price;
-                  
+
                   return (
                     <motion.div
                       key={product.id}
@@ -242,40 +245,12 @@ export default function HomePage({ user }) {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <div 
-                        className={`bg-[#141414] border rounded-2xl overflow-hidden transition-colors group flex flex-col h-full cursor-pointer ${isFree ? 'border-green-500/40 hover:border-green-500/80 shadow-[0_0_15px_rgba(34,197,94,0.05)] hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]' : 'border-[#2a2a2a] hover:border-[#f59e0b]/50'}`}
+                      <ProductGridCard
+                        product={product}
+                        isFree={isFree}
+                        learnMoreLabel={t('product.learn_more')}
                         onClick={() => navigate(isFree && !user ? '/login' : `/products/${product.slug || product.id}`)}
-                      >
-                        <div className="aspect-video bg-[#0a0a0a] relative overflow-hidden">
-                          {isFree && (
-                            <div className="absolute top-2 left-2 bg-[#f59e0b] text-black px-3 py-1.5 rounded-lg text-base font-black z-10 shadow-[0_0_16px_rgba(245,158,11,0.5)]">
-                              🎁 {t('product.free')}
-                            </div>
-                          )}
-                          {product.image_url ? (
-                            <img src={optimizedImageUrl(product.image_url, { width: 560, height: 315 })} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
-                              <Play size={32} className="text-[#2a2a2a]" />
-                            </div>
-                          )}
-                          <div className="absolute top-2 right-2 bg-black/60 backdrop-blur px-2 py-1 rounded text-2xl shadow-sm z-10">
-                            {getLanguageFlag(product.language)}
-                          </div>
-                        </div>
-                        <div className="p-5 flex flex-col flex-grow">
-                          <h3 className={`font-bold text-white mb-1 line-clamp-2 transition-colors ${isFree ? 'group-hover:text-[#f59e0b]' : 'group-hover:text-[#f59e0b]'}`}>{product.title || product.name}</h3>
-                          <p className={`text-xs font-medium mb-2 ${isFree ? 'text-[#f59e0b]' : 'text-gray-500'}`}>
-                            {getTagline(product.language, isFree)}
-                          </p>
-                          <p className="text-sm text-gray-400 line-clamp-2 mb-4 flex-grow">{product.description}</p>
-                          <div className="mt-auto pt-4 border-t border-[#2a2a2a]">
-                            <span className={`block text-center font-bold text-sm px-3 py-2 rounded-lg transition-all ${isFree ? 'text-[#f59e0b] bg-[#f59e0b]/10' : 'text-[#f59e0b] bg-[#f59e0b]/10 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.55)] group-hover:bg-[#f59e0b]/20'}`}>
-                              {t('product.learn_more')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      />
                     </motion.div>
                   );
                 })}
