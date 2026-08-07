@@ -27,7 +27,7 @@ const Hero = () => {
           <div className="mb-8 flex justify-center">
              <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center bg-gradient-to-br from-white/5 to-white/0 border border-white/10 shadow-[0_0_40px_rgba(212,175,55,0.15)] backdrop-blur-sm">
                 <img 
-                   src="https://horizons-cdn.hostinger.com/1db78d05-91f5-4455-8f8f-f031a8b68532/57ad90b43bad7c28578281f506f996bd.png" 
+                   src="/logo-uffisolutions.png"
                    alt="Gold Sphere Logo" 
                    className="w-16 h-16 md:w-24 md:h-24 object-contain animate-pulse-slow"
                 />

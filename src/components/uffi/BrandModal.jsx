@@ -57,7 +57,7 @@ const BrandModal = () => {
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-[#d4af37]/10 rounded-full flex items-center justify-center mb-6 border border-[#d4af37]/20">
                 <img 
-                  src="https://horizons-cdn.hostinger.com/1db78d05-91f5-4455-8f8f-f031a8b68532/57ad90b43bad7c28578281f506f996bd.png" 
+                  src="/logo-uffisolutions.png"
                   alt="UffiSphere" 
                   className="w-10 h-10 object-contain"
                 />

@@ -32,7 +32,7 @@ const Logo = ({ size = 'md', clickable = false, className }) => {
       {...motionProps}
     >
       <img 
-        src="https://horizons-cdn.hostinger.com/1db78d05-91f5-4455-8f8f-f031a8b68532/57e87afb0356e1c00547152607556f48.png" 
+        src="/logo-uffisolutions.png"
         alt="UffiSolutions Logo"
         className="w-full h-full object-contain"
       />

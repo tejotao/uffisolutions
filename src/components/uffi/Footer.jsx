@@ -16,7 +16,7 @@ const Footer = () => {
           <div className="text-center sm:text-left">
             <div className="flex items-center justify-center sm:justify-start gap-2 mb-4">
               <img 
-                src="https://horizons-cdn.hostinger.com/1db78d05-91f5-4455-8f8f-f031a8b68532/e257475657c0a2becd0112e6e5cfeb2a.png" 
+                src="/logo-uffisolutions.png"
                 alt="UffiSolutions Logo" 
                 className="h-6 sm:h-8 w-auto object-contain"
               />

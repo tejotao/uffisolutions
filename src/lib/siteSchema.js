@@ -9,7 +9,7 @@ const SITE_URL = 'https://www.uffisolutions.com';
 // Same logo already used for OG/Twitter images in index.html — kept as one
 // literal here rather than a shared constant, since this is the only other
 // place it's needed.
-const LOGO_URL = 'https://horizons-cdn.hostinger.com/1db78d05-91f5-4455-8f8f-f031a8b68532/57e87afb0356e1c00547152607556f48.png';
+const LOGO_URL = `${SITE_URL}/logo-uffisolutions.png`;
 
 // `address` is passed straight through as the Text form Schema.org accepts
 // for `address` (rather than hand-parsed into a PostalAddress object) —

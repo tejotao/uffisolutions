@@ -27,7 +27,7 @@ export default function Logo({
         whileHover={{ scale: 1.05 }}
       >
         <img 
-          src="https://horizons-cdn.hostinger.com/1db78d05-91f5-4455-8f8f-f031a8b68532/bec317f85eae1e9026cea33b42e08b4b.png" 
+          src="/logo-uffisolutions.png"
           alt="UffiSolutions Logo"
           className={`
             ${sizeMap[size] || sizeMap.medium} 
