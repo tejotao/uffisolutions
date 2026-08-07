@@ -65,7 +65,7 @@ export default function ResetPasswordPage() {
     } else {
       setDone(true);
       toast({ title: 'Password updated!', className: 'border-emerald-500 bg-zinc-900 text-white' });
-      setTimeout(() => navigate('/login'), 2500);
+      setTimeout(() => navigate('/dashboard'), 2500);
     }
   };
 
@@ -94,7 +94,7 @@ export default function ResetPasswordPage() {
             {done ? 'Password updated!' : 'Set new password'}
           </h2>
           <p className="mt-2 text-sm text-gray-400">
-            {done ? 'Redirecting to login...' : 'Choose a strong password for your account.'}
+            {done ? 'Redirecting to your dashboard...' : 'Choose a strong password for your account.'}
           </p>
         </motion.div>
       </div>
@@ -108,7 +108,7 @@ export default function ResetPasswordPage() {
               <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
                 <CheckCircle size={28} className="text-emerald-400" />
               </div>
-              <p className="text-zinc-400 text-sm text-center">Your password has been changed. Taking you to login…</p>
+              <p className="text-zinc-400 text-sm text-center">Your password has been changed. Taking you to your dashboard…</p>
             </div>
           ) : !validSession ? (
             <div className="flex flex-col items-center gap-4 py-4 text-center">

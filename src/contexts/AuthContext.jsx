@@ -67,9 +67,9 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
-    // Create profile record (RLS is OFF so this works without being logged in)
+    // Create profile record
     if (data.user) {
-      await supabase.from('profiles').upsert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: data.user.id,
         full_name: fullName,
         email: email,
@@ -78,6 +78,7 @@ export function AuthProvider({ children }) {
         level: 'Curioso',
         created_at: new Date().toISOString()
       });
+      if (profileError) throw profileError;
     }
     return data;
   };

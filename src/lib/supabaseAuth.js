@@ -138,9 +138,9 @@ export const signUpWithEmail = async (email, password, clientCode, name) => {
     });
     
     if (error) throw error;
-    
+
     if (data?.user) {
-      await supabase.from('profiles').upsert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: data.user.id,
         email: email,
         client_code: clientCode,
@@ -148,11 +148,26 @@ export const signUpWithEmail = async (email, password, clientCode, name) => {
         name: name,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
+
+      if (profileError) {
+        console.error('❌ [Auth] Erro ao criar perfil:', profileError.message);
+        return { success: false, data: null, error: profileError };
+      }
     }
-    
+
     return { success: true, data, error: null };
   } catch (error) {
     console.error('SignUp Error:', error);
+    return { success: false, data: null, error };
+  }
+};
+
+export const resendConfirmationEmail = async (email) => {
+  try {
+    const { data, error } = await supabase.auth.resend({ type: 'signup', email });
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
     return { success: false, data: null, error };
   }
 };

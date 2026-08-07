@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signUpWithEmail } from '@/lib/supabaseAuth';
+import { signUpWithEmail, resendConfirmationEmail } from '@/lib/supabaseAuth';
 import { useToast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateClientCode } from '@/lib/clientCodeGenerator';
 import Logo from '@/components/uffi/Logo';
@@ -18,10 +19,24 @@ export default function RegisterPage() {
   
   const [showEmailConfirmationModal, setShowEmailConfirmationModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
-  
+  const [resendLoading, setResendLoading] = useState(false);
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  const handleResend = async (targetEmail) => {
+    setResendLoading(true);
+    const { success, error } = await resendConfirmationEmail(targetEmail);
+    setResendLoading(false);
+    toast({
+      title: success ? t('toast.resend_success_title') : t('toast.error'),
+      description: success
+        ? t('toast.resend_success_desc')
+        : (error?.message || t('toast.register_error')),
+      variant: success ? 'default' : 'destructive'
+    });
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -62,6 +77,17 @@ export default function RegisterPage() {
       if (success) {
         setRegisteredEmail(email);
         setShowEmailConfirmationModal(true);
+      } else if (error?.message?.toLowerCase().includes('already registered')) {
+        toast({
+          title: t('toast.already_registered_title'),
+          description: t('toast.already_registered_desc'),
+          variant: "destructive",
+          action: (
+            <ToastAction altText={t('toast.resend_action')} onClick={() => handleResend(email)}>
+              {t('toast.resend_action')}
+            </ToastAction>
+          )
+        });
       } else {
         toast({
           title: t('toast.error'),
@@ -277,6 +303,18 @@ export default function RegisterPage() {
                 className="w-full py-4 px-4 rounded-xl font-black text-black bg-[#f59e0b] hover:bg-[#d97706] transition-all shadow-lg active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#1a1a1a] focus:ring-[#f59e0b] relative z-10"
               >
                 {t('modals.emailConfirmation.button')}
+              </button>
+
+              <button
+                onClick={() => handleResend(registeredEmail)}
+                disabled={resendLoading}
+                className="w-full mt-3 py-2 text-sm font-medium text-gray-400 hover:text-[#f59e0b] transition-colors disabled:opacity-50 relative z-10"
+              >
+                {resendLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                ) : (
+                  t('modals.emailConfirmation.resend')
+                )}
               </button>
             </motion.div>
           </div>
