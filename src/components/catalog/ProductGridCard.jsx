@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, CheckCircle } from 'lucide-react';
+import { Play, CheckCircle, Sparkles } from 'lucide-react';
 import { optimizedImageUrl } from '@/lib/imageUrl';
 
 function getLanguageFlag(lang) {
@@ -32,13 +32,20 @@ export default function ProductGridCard({ product, isFree, inLibrary = false, on
       onClick={onClick}
       className={`group relative bg-[#141414] rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ease-in-out md:hover:scale-[1.02] md:hover:z-10 flex flex-col h-full ${
         isFree
-          ? 'border-2 border-[#C9A84C] shadow-[0_0_15px_rgba(201,168,76,0.4)]'
+          ? 'border-2 border-[#C9A84C] animate-free-card-pulse'
           : 'border border-[#2a2a2a] hover:border-[#f59e0b]/50'
       }`}
     >
+      {isFree && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 z-40 w-1/3 pointer-events-none animate-free-shine"
+          style={{ background: 'linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.55) 50%, transparent 80%)' }}
+        />
+      )}
       {isFree && !inLibrary && (
-        <div className="absolute top-2 left-2 z-30 bg-[#C9A84C] text-[#141414] text-xs font-bold px-2.5 py-1 rounded-full animate-free-pulse">
-          FREE
+        <div className="absolute top-2 left-2 z-30 flex items-center gap-1 bg-[#C9A84C] text-[#141414] text-[13px] font-black px-3 py-1.5 rounded-full animate-free-pulse">
+          <Sparkles size={13} strokeWidth={2.5} /> FREE
         </div>
       )}
       {inLibrary && (

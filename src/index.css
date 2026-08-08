@@ -95,13 +95,37 @@
   scrollbar-width: none;
 }
 
-/* Subtle breathing glow for the "FREE" product badge — a soft shadow
-   intensity shift rather than Tailwind's built-in animate-pulse (opacity
-   flicker), which read as too abrupt for this. */
+/* Breathing glow for the "FREE" product badge — a soft shadow intensity
+   shift rather than Tailwind's built-in animate-pulse (opacity flicker),
+   which read as too abrupt for this. Shares its timing with
+   free-card-border-pulse below so the badge and the card border breathe
+   together instead of the border sitting static. */
 @keyframes free-badge-pulse {
-  0%, 100% { box-shadow: 0 0 4px rgba(201, 168, 76, 0.5); }
-  50%      { box-shadow: 0 0 10px rgba(201, 168, 76, 0.9); }
+  0%, 100% { box-shadow: 0 0 5px rgba(201, 168, 76, 0.55); }
+  50%      { box-shadow: 0 0 14px rgba(201, 168, 76, 1); }
 }
 .animate-free-pulse {
   animation: free-badge-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes free-card-border-pulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(201, 168, 76, 0.4); }
+  50%      { box-shadow: 0 0 26px rgba(201, 168, 76, 0.75); }
+}
+.animate-free-card-pulse {
+  animation: free-card-border-pulse 2.4s ease-in-out infinite;
+}
+
+/* One-shot diagonal shine sweeping across a FREE card the moment it
+   mounts (page load, or a card entering the grid after a filter change).
+   `forwards` + a single iteration means it plays once and leaves no
+   trace — no JS/observer needed, no re-trigger on scroll. */
+@keyframes free-card-shine {
+  0%   { left: -60%; opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { left: 120%; opacity: 0; }
+}
+.animate-free-shine {
+  animation: free-card-shine 1.4s ease-out 0.15s 1 both;
 }
