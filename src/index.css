@@ -109,8 +109,8 @@
 }
 
 @keyframes free-card-border-pulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(201, 168, 76, 0.4); }
-  50%      { box-shadow: 0 0 26px rgba(201, 168, 76, 0.75); }
+  0%, 100% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.45); }
+  50%      { box-shadow: 0 0 28px rgba(34, 197, 94, 0.85); }
 }
 .animate-free-card-pulse {
   animation: free-card-border-pulse 2.4s ease-in-out infinite;
