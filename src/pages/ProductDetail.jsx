@@ -17,6 +17,7 @@ import { optimizedImageUrl } from '@/lib/imageUrl';
 import { supabase } from '@/lib/supabaseClient';
 import { buildProductSchema, buildFaqSchema, buildBreadcrumbSchema, getOgLocale } from '@/lib/productSchema';
 import { getCtaVariant, getFreeCta, getFreeSubtext, getAuthorityLine, getObjections, getTagline } from '@/lib/conversionCopy';
+import { rememberSignupIntentLanguage } from '@/lib/signupIntent';
 
 const SITE_URL = 'https://www.uffisolutions.com';
 
@@ -234,7 +235,7 @@ export default function ProductDetail({ user }) {
       if (!user) {
         return (
           <div className={wrapperClassName}>
-            <button onClick={() => navigate('/register')} className={`${buttonBase} bg-[#10b981] hover:bg-[#059669] text-black`}>
+            <button onClick={() => { rememberSignupIntentLanguage(product.language); navigate('/register'); }} className={`${buttonBase} bg-[#10b981] hover:bg-[#059669] text-black`}>
               🎁 {getFreeCta(product.language)}
             </button>
             <p className="text-xs text-gray-500 text-center mt-2.5">{getFreeSubtext(product.language)}</p>

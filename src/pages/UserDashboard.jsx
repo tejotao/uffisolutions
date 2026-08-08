@@ -21,6 +21,7 @@ import { getUserPurchases } from '@/lib/purchaseQueries';
 import { getMyActiveAccesses, isAccessValid, daysUntilExpiry } from '@/lib/accessQueries';
 import { getDeliverablesForProducts } from '@/lib/deliverableQueries';
 import { supabase } from '@/lib/supabaseClient';
+import { consumeSignupIntentLanguage } from '@/lib/signupIntent';
 import { cn, getInitials } from '@/lib/utils';
 import { optimizedImageUrl } from '@/lib/imageUrl';
 
@@ -323,6 +324,11 @@ export default function UserDashboard({ user }) {
   const [isSavingWelcome, setIsSavingWelcome] = useState(false);
   const [welcomeError, setWelcomeError] = useState(null);
 
+  // Bumped after the welcome modal saves a new language, so the free-products
+  // list (computed below from the profile's language) is refetched with it —
+  // otherwise the list stays stuck showing whatever it loaded with first.
+  const [reloadKey, setReloadKey] = useState(0);
+
   // ── Load data ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -342,7 +348,11 @@ export default function UserDashboard({ user }) {
             .single();
 
           if (!profileError && profileData) {
-            userLang = profileData.preferred_language || profileData.language || 'pt';
+            // On a brand-new profile (first_login), fall back to the language of
+            // the free product that sent this visitor to /register in the first
+            // place, before defaulting to Portuguese — see signupIntent.js.
+            const intentLang = profileData.first_login === true ? consumeSignupIntentLanguage() : null;
+            userLang = profileData.preferred_language || profileData.language || intentLang || 'pt';
             userProfileData = profileData;
             if (profileData.client_code) setClientCode(profileData.client_code);
             if (profileData.full_name) setFullName(profileData.full_name);
@@ -428,7 +438,7 @@ export default function UserDashboard({ user }) {
     };
 
     load();
-  }, [user, navigate]);
+  }, [user, navigate, reloadKey]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleLogout = async () => {
@@ -456,6 +466,7 @@ export default function UserDashboard({ user }) {
       if (updateError) throw updateError;
       toast({ title: 'Preferences saved', className: 'border-amber-500 bg-zinc-900 text-white', duration: 3000 });
       setShowWelcomeModal(false);
+      setReloadKey((k) => k + 1); // re-fetch so the free-resources list matches the language just saved
     } catch {
       setWelcomeError('Failed to save. Please try again.');
     } finally {
