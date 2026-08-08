@@ -145,7 +145,6 @@ export const signUpWithEmail = async (email, password, clientCode, name) => {
         email: email,
         client_code: clientCode,
         full_name: name,
-        name: name,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
 
