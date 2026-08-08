@@ -44,7 +44,7 @@ export default function ProductGridCard({ product, isFree, inLibrary = false, on
         />
       )}
       {isFree && !inLibrary && (
-        <div className="absolute top-2 left-2 z-30 flex items-center gap-1 bg-[#C9A84C] text-[#141414] text-[13px] font-black px-3 py-1.5 rounded-full animate-free-pulse">
+        <div className="absolute top-2 left-2 z-30 flex items-center gap-1 bg-[#22c55e] text-black text-[13px] font-black px-3 py-1.5 rounded-full border-2 border-[#C9A84C] animate-free-pulse">
           <Sparkles size={13} strokeWidth={2.5} /> FREE
         </div>
       )}
