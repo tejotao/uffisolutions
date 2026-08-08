@@ -83,9 +83,14 @@ export default function RegisterPage() {
           description: t('toast.already_registered_desc'),
           variant: "destructive",
           action: (
-            <ToastAction altText={t('toast.resend_action')} onClick={() => handleResend(email)}>
-              {t('toast.resend_action')}
-            </ToastAction>
+            <div className="flex flex-col gap-1.5">
+              <ToastAction altText={t('toast.login_action')} onClick={() => navigate('/login', { state: { email } })}>
+                {t('toast.login_action')}
+              </ToastAction>
+              <ToastAction altText={t('toast.resend_action')} onClick={() => handleResend(email)}>
+                {t('toast.resend_action')}
+              </ToastAction>
+            </div>
           )
         });
       } else {

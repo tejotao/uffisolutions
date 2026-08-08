@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowLeft, Loader2, X, CheckCircle, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginWithEmail } from '@/lib/supabaseAuth';
@@ -10,7 +10,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Logo from '@/components/uffi/Logo';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
