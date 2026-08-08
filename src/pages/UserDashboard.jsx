@@ -348,10 +348,14 @@ export default function UserDashboard({ user }) {
             .single();
 
           if (!profileError && profileData) {
-            // On a brand-new profile (first_login), fall back to the language of
-            // the free product that sent this visitor to /register in the first
-            // place, before defaulting to Portuguese — see signupIntent.js.
-            const intentLang = profileData.first_login === true ? consumeSignupIntentLanguage() : null;
+            // No language recorded yet means this profile has never picked one —
+            // fall back to the language of the free product that sent this
+            // visitor to /register in the first place, before defaulting to
+            // Portuguese. Not gated on first_login: that flag's default on a
+            // fresh row isn't something this code can verify. — see signupIntent.js.
+            const intentLang = (!profileData.preferred_language && !profileData.language)
+              ? consumeSignupIntentLanguage()
+              : null;
             userLang = profileData.preferred_language || profileData.language || intentLang || 'pt';
             userProfileData = profileData;
             if (profileData.client_code) setClientCode(profileData.client_code);
