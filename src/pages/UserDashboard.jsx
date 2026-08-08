@@ -338,7 +338,6 @@ export default function UserDashboard({ user }) {
       setError(null);
       try {
         let userLang = 'pt';
-        let userProfileData = null;
 
         try {
           const { data: profileData, error: profileError } = await supabase
@@ -348,16 +347,20 @@ export default function UserDashboard({ user }) {
             .single();
 
           if (!profileError && profileData) {
-            // No language recorded yet means this profile has never picked one —
-            // fall back to the language of the free product that sent this
-            // visitor to /register in the first place, before defaulting to
-            // Portuguese. Not gated on first_login: that flag's default on a
-            // fresh row isn't something this code can verify. — see signupIntent.js.
-            const intentLang = (!profileData.preferred_language && !profileData.language)
-              ? consumeSignupIntentLanguage()
-              : null;
-            userLang = profileData.preferred_language || profileData.language || intentLang || 'pt';
-            userProfileData = profileData;
+            // A signup intent means this visitor clicked "get it free" on a
+            // specific product just moments ago, while logged out — a
+            // stronger, fresher signal than whatever preferred_language
+            // already holds, so it wins outright and gets persisted right
+            // away. profiles has no `language` or `first_login` column (only
+            // preferred_language) — see signupIntent.js.
+            const intentLang = consumeSignupIntentLanguage();
+            userLang = intentLang || profileData.preferred_language || 'pt';
+            if (intentLang && intentLang !== profileData.preferred_language) {
+              supabase.from('profiles').update({ preferred_language: intentLang }).eq('id', user.id)
+                .then(({ error: persistError }) => {
+                  if (persistError) console.error('Failed to persist signup intent language:', persistError);
+                });
+            }
             if (profileData.client_code) setClientCode(profileData.client_code);
             if (profileData.full_name) setFullName(profileData.full_name);
             // Set display name from profile
@@ -367,7 +370,9 @@ export default function UserDashboard({ user }) {
               user?.email?.split('@')[0] ||
               'User';
             setDisplayName(name.split(' ')[0]); // only first word
-            if (profileData.first_login === true) {
+            // No preference on file and no fresh intent to infer one from —
+            // ask once. Once preferred_language is set, this never fires again.
+            if (!profileData.preferred_language && !intentLang) {
               setShowWelcomeModal(true);
               setWelcomeLanguage(userLang.split('-')[0]);
             }
@@ -462,9 +467,7 @@ export default function UserDashboard({ user }) {
     try {
       const { error: updateError } = await supabase.from('profiles').upsert({
         id: user.id,
-        language: welcomeLanguage,
         preferred_language: welcomeLanguage,
-        first_login: false,
         updated_at: new Date().toISOString(),
       });
       if (updateError) throw updateError;

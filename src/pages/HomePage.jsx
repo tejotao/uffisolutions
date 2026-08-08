@@ -10,7 +10,6 @@ import { fetchAllProducts, fetchAllCategories, getCategoryIdsForProducts, logSea
 import { optimizedImageUrl } from '@/lib/imageUrl';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ProductGridCard from '@/components/catalog/ProductGridCard';
-import { rememberSignupIntentLanguage } from '@/lib/signupIntent';
 
 export default function HomePage({ user }) {
   const [products, setProducts] = useState([]);
@@ -250,14 +249,7 @@ export default function HomePage({ user }) {
                         product={product}
                         isFree={isFree}
                         learnMoreLabel={t('product.learn_more')}
-                        onClick={() => {
-                          if (isFree && !user) {
-                            rememberSignupIntentLanguage(product.language);
-                            navigate('/login');
-                          } else {
-                            navigate(`/products/${product.slug || product.id}`);
-                          }
-                        }}
+                        onClick={() => navigate(`/products/${product.slug || product.id}`)}
                       />
                     </motion.div>
                   );
