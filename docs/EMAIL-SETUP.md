@@ -105,9 +105,9 @@ Os ficheiros HTML estao em `docs/email-templates/`
 - [ ] Supabase SMTP configurado e guardado
 - [ ] Site URL: `https://uffisolutions.com`
 - [ ] Redirect URLs adicionados
-- [ ] Template "Confirm signup" colado e guardado
-- [ ] Template "Reset password" colado e guardado
-- [ ] Teste de registo -> email recebido com branding correcto
+- [x] Template "Confirm signup" colado e guardado (2026-08-08, com a logo corrigida — ver `docs/SECURITY-AUDIT-2026-08.md`)
+- [x] Template "Reset password" colado e guardado (2026-08-08, com a logo corrigida)
+- [x] Teste de registo -> email recebido com branding correcto (confirmado pelo usuário)
 - [ ] Teste de reset -> link abre `/reset-password` e funciona end-to-end
 
 ---
