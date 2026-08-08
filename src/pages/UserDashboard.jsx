@@ -18,7 +18,7 @@ import { logout } from '@/lib/supabaseAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { fetchAllProducts } from '@/lib/catalogQueries';
 import { getUserPurchases } from '@/lib/purchaseQueries';
-import { getMyActiveAccesses, isAccessValid, daysUntilExpiry } from '@/lib/accessQueries';
+import { getMyActiveAccesses, isAccessValid, daysUntilExpiry, grantProductAccess } from '@/lib/accessQueries';
 import { getDeliverablesForProducts } from '@/lib/deliverableQueries';
 import { supabase } from '@/lib/supabaseClient';
 import { consumeSignupIntentLanguage } from '@/lib/signupIntent';
@@ -455,6 +455,22 @@ export default function UserDashboard({ user }) {
     navigate('/');
   };
 
+  // Free items in this list were never explicitly claimed (that only
+  // happens on the product page's CTA) — grant access on the way in so
+  // clicking a free card doesn't dead-end on "you don't have access".
+  const handleOpenFreeProduct = async (p) => {
+    try {
+      const { error } = await grantProductAccess({
+        userId: user.id, productId: p.id,
+        expiryDate: null, grantedBy: user.id, notes: 'Self-claimed free product',
+      });
+      if (error) console.error('Failed to claim free product:', error);
+    } catch (err) {
+      console.error('Failed to claim free product:', err);
+    }
+    navigate(`/library/${p.slug || p.id}`);
+  };
+
   const copyClientCode = () => {
     if (!clientCode) return;
     navigator.clipboard.writeText(clientCode);
@@ -690,7 +706,7 @@ export default function UserDashboard({ user }) {
                 <SectionTitle icon={BookOpen} label="Free Resources" count={freeProducts.length} iconColor="text-emerald-400" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {freeProducts.map((product, i) => (
-                    <ProductCard key={`f-${product.id}`} product={product} index={i} onFallback={(p) => navigate(`/library/${p.slug || p.id}`)} />
+                    <ProductCard key={`f-${product.id}`} product={product} index={i} onFallback={handleOpenFreeProduct} />
                   ))}
                 </div>
               </section>

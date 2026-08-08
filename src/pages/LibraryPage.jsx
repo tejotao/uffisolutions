@@ -139,16 +139,28 @@ export default function LibraryPage({ user }) {
           </div>
         ) : !hasAccess ? (
           <div className="flex flex-col items-center text-center py-20">
-            <div className="w-14 h-14 bg-zinc-800/60 rounded-full flex items-center justify-center mb-5">
-              <Lock size={24} className="text-zinc-500" />
+            <div className="w-14 h-14 bg-amber-500/10 rounded-full flex items-center justify-center mb-5 border border-amber-500/20">
+              <span className="text-2xl">👋</span>
             </div>
-            <h1 className="text-xl font-bold text-white mb-2">You don't have access to this product</h1>
-            <button
-              onClick={() => navigate(`/products/${product.slug || product.id}`)}
-              className="bg-amber-500 hover:bg-amber-600 text-black px-6 py-2.5 rounded-lg font-bold transition-colors text-sm mt-3"
-            >
-              View Product
-            </button>
+            <h1 className="text-xl font-bold text-white mb-2">Welcome to UffiSolutions!</h1>
+            <p className="text-sm text-zinc-400 max-w-sm mb-7 leading-relaxed">
+              This one isn't unlocked on your account yet — head to its page to grab it.
+              Free resources take one click, no extra steps.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => navigate(`/products/${product.slug || product.id}`)}
+                className="bg-amber-500 hover:bg-amber-600 text-black px-6 py-2.5 rounded-lg font-bold transition-colors text-sm"
+              >
+                View Product
+              </button>
+              <button
+                onClick={() => navigate('/products')}
+                className="text-zinc-400 hover:text-white px-6 py-2.5 rounded-lg font-semibold transition-colors text-sm"
+              >
+                Browse Free Resources
+              </button>
+            </div>
           </div>
         ) : (
           <>
