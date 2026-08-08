@@ -125,34 +125,24 @@ export const logout = async () => {
 
 export const signUpWithEmail = async (email, password, clientCode, name) => {
   try {
-    const { data, error } = await supabase.auth.signUp({ 
-      email, 
+    // Email confirmation is required for this project, so `data.session` is
+    // null right after signUp() — the client has no auth token for the new
+    // user yet, and any profiles.upsert() here would be blocked by RLS
+    // (auth.uid() = id can't hold with no session). The public.handle_new_user
+    // trigger on auth.users runs SECURITY DEFINER and creates the profiles
+    // row (id, email, full_name, client_code) from this metadata instead.
+    const { data, error } = await supabase.auth.signUp({
+      email,
       password,
       options: {
         data: {
           client_code: clientCode,
-          full_name: name,
-          name: name
+          full_name: name
         }
       }
     });
-    
+
     if (error) throw error;
-
-    if (data?.user) {
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: data.user.id,
-        email: email,
-        client_code: clientCode,
-        full_name: name,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
-
-      if (profileError) {
-        console.error('❌ [Auth] Erro ao criar perfil:', profileError.message);
-        return { success: false, data: null, error: profileError };
-      }
-    }
 
     return { success: true, data, error: null };
   } catch (error) {
