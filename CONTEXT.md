@@ -1828,3 +1828,21 @@ Testado ao vivo em produção com navegador real (chrome-devtools MCP) em 3 larg
 
 ### Publicado
 `166fd7a` (mover/corrigir template de email), `3a8ebd3` (hover reveal + destaque grátis) — `staging` → `main` (fast-forward).
+
+---
+
+## Sessão 12/10/2026 — Ecossistema de 3 projetos, porta local 3001 e mapa de integrações
+
+### Regra nova: 3 projetos isolados
+O usuário passou a trabalhar em 3 projetos ao mesmo tempo, cada um na sua janela do VS Code, 100% independentes (banco, e-mail, deploy e integrações próprios): **A · HUB Simulator** (`UffiSphere/`, porta 3000), **B · UffiSolutions** (este, porta 3001) e **C · HubUKBox** (`HUBUKBOX_2026/`, porta 3003). Única ligação permitida: A ↔ B pelo token de acesso (B vende o PRO no Stripe e emite token com validade; A só valida). Regras completas no `CLAUDE.md` da pasta-mãe; papel e integrações do B no novo `CLAUDE.md` deste projeto.
+
+### Porta local fixa
+`dev` e `preview` passaram de 3000 para **3001** com `--strictPort` (a 3000 estava ocupada pelo `next-server` do HUB Simulator). Pendente no Supabase: adicionar `http://localhost:3001/**` às Redirect URLs para o login local funcionar.
+
+### Mapa de contas levantado
+- **Vercel:** projeto `uffisolutions-c549`, time `hubukbox-s-projects`, deploy automático do GitHub (`vercel[bot]`). A Vercel CLI deste Mac está logada em outra conta (`hubukbox-8106`, do HubUKBox), onde o projeto não aparece.
+- **Resend:** domínio `uffisolutions.com` verificado (DKIM `resend._domainkey`, `send.` no SES eu-west-1). Login da conta não registrado.
+- **Supabase, Stripe, Hostinger:** sem mudança; detalhes no `CLAUDE.md`.
+
+### Pendente
+Venda do HUB Simulator PRO ainda não existe no B (rota `/checkout/hub-simulator-pro`, produto e emissão de token).

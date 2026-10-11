@@ -7,9 +7,9 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "vite --port 3000",
+    "dev": "vite --port 3001 --strictPort",
     "build": "node tools/generate-llms.js || true && node tools/generate-sitemap.js || true && vite build && node tools/prerender-product-meta.js || true",
-    "preview": "vite preview --host :: --port 3000",
+    "preview": "vite preview --host :: --port 3001 --strictPort",
     "lint": "eslint . --quiet"
   },
   "dependencies": {
